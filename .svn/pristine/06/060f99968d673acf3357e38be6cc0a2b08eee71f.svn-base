@@ -1,0 +1,40 @@
+import service from 'service';
+import {modelTemplate} from 'utils';
+import Form from './Form';
+
+const namespace = {
+  name: 'car_used_records', //模型的命名空间
+  title: '用车记录', //模型的名称
+  clazz: 'CarUsedRecord', //模型对应的后台实体类
+  linkAttrs: ['car', 'driver', 'createdBy'],
+};
+
+
+const modelParam = {
+  form: Form, //使用的表单
+  titleRender: (record) => !record.users ? '新用车申请' : '用车申请：' + record.users || service.userInfo.user.name,
+  effects: {
+    //表单消息：确认收车
+    * confirmVehicle({payload}, {call, put, select}) {
+      //解构消息
+      let {record} = payload;
+
+      //更新车辆状态
+      let resultCar = yield call(service.updateRecord, record.car + '/using?isUsing=' + false, {});
+
+    },
+
+    //表单消息：派车
+    * sendVehicle({payload}, {call, put, select}) {
+      //解构消息
+      let {record} = payload;
+
+      //更新车辆状态
+      let resultCar = yield call(service.updateRecord, record.car + '/using?isUsing=' + true, {});
+      yield call(service.updateRecord, service.parseRecordUrl(record), record);
+      yield put({type:'setState',payload});
+    },
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

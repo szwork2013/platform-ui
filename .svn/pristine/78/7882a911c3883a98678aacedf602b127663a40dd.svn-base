@@ -1,0 +1,36 @@
+//----------------------顶层引用-----------------------
+//必须在顶层引用，并且和以下3个文件打包在一起引用
+import React from 'react';
+import ReactDOM from 'react-dom';
+//必须放在react和react-dom后面引入，否则IE不能正常使用
+import 'babel-polyfill';
+//----------------------------------------------------
+
+import dva from 'dva';
+import createHistory from 'history/createHashHistory';
+import createLoading from 'dva-loading';
+import { message } from 'antd';
+
+// 1. 初始化dva
+const app = window.app = dva({
+  history: createHistory(),
+  onError(error) {
+    message.error('十分抱歉，系统出现了错误：'+error, 3);
+  }
+});
+
+// 2. 加载插件
+app.use(createLoading({
+  effects: true,
+}));
+
+// 3. 注册模型
+import webappModel from './webappModel';
+app.model(webappModel);
+
+// 4. 注册路由器
+import webappRouter from './webappRouter';
+app.router(webappRouter);
+
+// 5. 启动UI
+app.start('#root');

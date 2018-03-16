@@ -1,0 +1,311 @@
+import { Menu, Dropdown, Icon, Button, Modal, message } from 'antd';
+
+import { arrayToTree } from 'utils';
+import service from 'service';
+
+//引入样式组件
+import {
+  StyledMenu,
+  StyledTable,
+  StyledDropdown,
+  theme
+} from './styled';
+
+import EditableCell from './EditableCell';
+
+//列表组件
+const List = (props) => {
+  //解构参数
+  const {
+    treedata = false,
+    editMode, //编辑模式
+    list, //列表定义，ViewLayout注入
+    modelName, //模型名称，ViewLayout注入
+    model, //模型，ViewLayout注入
+    tabs, //tab数组，ViewLayout注入
+    dispatch,
+    loading,
+    appTheme, //应用皮肤定义
+    heightOffset = 0, //高度调整量
+    uid, //多个视图用一个模型时，用来区分不同的视图
+  } = props;
+
+  let { size='middle', permissions, columns, rowActions,
+      rowSelection, form, bordered, colDefaultLink,scrollx, ...tableProps } = list;  //2017-12-19 zyk 添加横向滚动scrollx支持
+  permissions = permissions || {};
+
+  //设置选择配置
+  if (rowSelection) {
+    rowSelection.selectedRowKeys = model.selectedRowKeys;
+    rowSelection.selectedRows=model.selectedRows;  //2017-12-04 zyk 视图选中行
+    rowSelection.onChange = handelRowSelected;
+  }
+
+  //构造操作列
+  columns = constructColumnsConfig();
+
+  //获取数据
+  let dataSource = model.list;
+  //郑波2017-11-19增加：多个视图使用一个模型支持
+  if (uid && model.viewData) {
+    let viewData = model.viewData.find((r) => r.key==uid);
+    if (viewData) dataSource = viewData.data.list;
+  }
+  //---END---  
+  
+  if (dataSource && treedata) { // 树形数据视图
+    dataSource = arrayToTree(dataSource, 'id', 'parentId');
+  }
+
+  if (!dataSource)
+    dataSource = [];
+  //显示UI
+  theme.contentHeight = appTheme.height.content + heightOffset;
+  return (
+    <StyledTable {...tableProps} key={modelName+'ListTable'}
+      size={size}
+      tabs={tabs}
+      bordered={bordered||true}
+      scroll={{y: theme.table.height()-theme.table.header.totalHeight()-2,x:scrollx}}  //2017-12-19 zyk 添加横向滚动scrollx支持
+      columns={columns}
+      dataSource={dataSource}
+      loading={loading}
+      rowKey={ (record, index) => service.parseRecordUrl(record) || index }
+      pagination={false}
+      rowSelection = {rowSelection}
+      onChange={handleTableChange}
+    />
+  );
+
+  //处理表格变化事件
+  function handleTableChange(pagination, filters, sorter, dto='o') {
+    if (!sorter) return;
+
+    let sort = '';
+    if (sorter.order) {
+      const order = sorter.order.startsWith('asc') ? 'asc' : 'desc';
+      sort = dto+'.'+sorter.field+','+order;
+    }
+
+    dispatch({type:`${modelName}/query`,
+      payload:{
+        page: model.page.number,
+        sort,
+        dataKey:uid,
+      }
+    })
+  }
+
+  //处理选择的行变化事件
+  function handelRowSelected(selectedRowKeys, selectedRows) {
+    dispatch({
+      type: modelName+'/save',
+      payload: {
+        selectedRowKeys: selectedRowKeys,
+        selectedRows:selectedRows //2017-12-04 zyk 视图选中行
+      }
+    });
+  }
+
+  //处理行被点击事件
+  function handleRowClicked(text, record, actionType) {
+    handleRecordOperation(actionType || 'view', record);
+  }
+
+  //构造列配置
+  function constructColumnsConfig() {
+    let newColumns = [];
+
+    //把无权限的列删除
+    for (let col of columns) {
+      //如果视图指定了缺省列link，则未指定列都加：郑波2017-11-29增加
+      if (!col.link && colDefaultLink) {
+        col.link = colDefaultLink;
+        if (col.render&&!col.textRender) {
+          col.textRender = col.render;
+          col.render = undefined;
+        }
+      }
+      //---END---
+
+      if (service.authz(col.permission)) {
+        if (col.link) { //处理链接列
+          addLinkToCol(col);
+        }
+        else {
+          if (!col.render) col.render = col.textRender;
+        }
+
+        if (col.editor) { //处理可编辑列
+          addEditorIntoCol(col);
+        }
+
+        newColumns.push(col);
+      }
+    }
+    //把操作列加入
+    addRowActions(newColumns, rowActions);
+
+    return newColumns;
+  }
+
+  //加入链接
+  function addLinkToCol(col) {
+    col.render = (text, record) =>
+      <a href="javascript:void(0)"
+        onClick={() => handleRowClicked(text, record, col.link)}
+      >
+        {col.textRender ? col.textRender(text, record) : text||'***'}
+      </a>
+  }
+
+  //加入editor
+  function addEditorIntoCol(col) {
+    let controlProps = col.controlProps;
+    col.render = (text, record) => {
+      //郑波2017-11-23增加：可以动态计算列的属性，如key等
+      if (col.editorRender) {
+        let colProps = col.editorRender(text, record);
+        col.key = colProps.key;
+        col.editor = colProps.editor;
+      }
+      //---END---
+
+      return (
+      <EditableCell
+        key={col.key+'EditableCell'}
+        editMode={editMode}
+        editor={col.editor}
+        type={col.type}
+        title={col.title}
+        editable={getEditorEditMode(editMode, model, record)} //是否可以编辑
+        modelName={modelName} //模型名称
+        record={record} //记录
+        field={col.key} //值对应的字段
+        textRender={col.textRender}
+        valueRender={col.valueRender}
+        dispatch={dispatch}
+        controlProps={controlProps}
+      />
+      )
+    }
+  }
+
+  //加入操作列
+  function addRowActions(columns, rowActions) {
+    if (rowActions) {
+      //构造缺省操作菜单
+      if (rowActions.length == 0) {
+        rowActions = [
+          { title:'编辑', type:'edit', permission: permissions.edit },
+          { title:'查看', type:'view' },
+          { title:'删除', type:'delete', permission: permissions.delete },
+        ];
+      }
+
+      const action = {
+        title: '操作',
+        key: 'operation',
+        fixed: 'right',
+        width: 80,
+        render: (text, record) => (
+          <StyledDropdown overlay={menu(record)} >
+            <div>
+              <Icon type="bars" />
+              <Icon type="down" />
+            </div>
+          </StyledDropdown>
+        ),
+      };
+      columns.push(action);
+    }
+  }
+
+  //处理记录操作
+  function handleRecordOperation(actionType, record) {
+    //构造消息类型
+    let recordTitle;
+    let messageType = modelName+'/'+actionType;
+
+    if (actionType == 'delete') { //删除处理
+      showDeleteConfirm(messageType, record);
+      return;
+    }
+
+    if (actionType == 'edit' || actionType == 'view') { //编辑和查看都发送打开消息
+      messageType = modelName+'/open';
+    }
+
+    //发送消息
+    dispatch({
+      type: messageType,
+      payload:{
+        record: record,
+        state: {
+          mode: actionType,
+          origin: Object.assign({},record),
+        },
+        form,
+      }
+    })
+  }
+
+  //构造记录的操作列菜单
+  function menu(record) {
+    return (
+      <StyledMenu
+        onClick={ ({key}) =>handleRecordOperation(
+          (rowActions)[key-1].type, record
+        ) }
+      >
+      {
+        rowActions.map((item, index) =>
+          service.authz(item.permission) &&
+          <Menu.Item key={index+1}>
+            <span>{item.title}</span>
+          </Menu.Item>)
+      }
+      </StyledMenu>
+    )
+  }
+
+  //删除确认
+  function showDeleteConfirm(messageType, record) {
+    Modal.confirm({
+      title: '删除确认',
+      content: '删除选择的记录，是否确定？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk() {
+        //发送删除消息
+        dispatch({
+          type: messageType,
+          payload:{
+            record: record,
+          }
+        })
+      },
+    });
+  }
+
+  //判断是否可以编辑
+  function getEditorEditMode(editMode, model, record) {
+    if (!editMode || editMode == '' || !model ) return false;
+    if (editMode == 'table') return model.viewEditState==true; //全表编辑模式
+
+    //行编辑模式
+    return model.viewEditState==service.parseRecordUrl(record);
+  }
+}
+
+import PropTypes from 'prop-types';
+List.propTypes = {
+  type: PropTypes.string,
+  list: PropTypes.object.isRequired,
+  editMode: PropTypes.string,
+  modelName: PropTypes.string.isRequired,
+  model: PropTypes.object.isRequired,
+  dispatch: PropTypes.func.isRequired,
+}
+
+export default List;

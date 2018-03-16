@@ -1,0 +1,214 @@
+import { Modal, message } from 'antd';
+
+import {
+  StyledButtonsDiv,
+  StyledButton
+} from './styled';
+
+import service from 'service';
+
+const ActionButtons = (props) => {
+  //解构参数
+  const {
+    editMode, //编辑模式
+    actionBar, //操作条参数
+    modelName, //模型名称
+    model, //模型
+    dispatch,
+    uid,
+  } = props;
+  if(!actionBar) return null;
+
+  //直接指定了按钮组件，返回即可
+  if(actionBar.buttons && !(actionBar.buttons instanceof Array))
+    return actionBar.buttons;
+
+  //可编辑视图缺省按钮处理
+  let buttons = undefined;
+  if(actionBar&&actionBar.buttons&&(actionBar.buttons instanceof Array)){
+    buttons=[];
+    actionBar.buttons.forEach((item)=>{
+      buttons.push(item);
+    })
+  }
+  if (editMode) { //可编辑视图
+    buttons=buttons||[];
+    if (actionBar.newRow!=false)
+      buttons.push({ title:'新增', type:'newRow', icon:'plus',
+        payloadRender: actionBar.newrowPayloadRender,
+      });
+
+    if (actionBar.saveTable!=false)
+      buttons.push({
+        title:'保存表格', type:'saveTable', icon:'save',
+        payloadRender: actionBar.saveTablePayloadRender,
+        permission: (model) => model.viewEditState ? '' : 'hidden',
+      });
+
+    if (actionBar.reloadTable!=false)
+      buttons.push({
+        title:'废弃修改', type:'reloadTable', icon:'retweet', style:'danger',
+        payloadRender: actionBar.reloadTablePayloadRender,
+        permission: (model) => model.viewEditState ? '' : 'hidden',
+      });
+  }
+
+  //根据自定义的buttons属性构造按钮
+  if (buttons) return (
+    service.authz(actionBar.permission) &&
+    <StyledButtonsDiv key={modelName+'ActionBar'}>
+      {renderNewButton()}
+      {renderButtons(buttons)}
+      {renderDeleteButton()}
+    </StyledButtonsDiv>
+  );
+
+  //缺省构造新增按钮和删除按钮
+  return (
+    <StyledButtonsDiv key={modelName+'ActionBar'}>
+      {renderNewButton()}
+      {renderDeleteButton()}
+    </StyledButtonsDiv>
+  );
+
+  //构造自定义按钮
+  function renderButtons(buttons) {
+    return buttons.map((item, index) => {
+      //构造点击按钮发送消息的参数
+      let payload;
+      if (item.payloadRender) {
+        payload = item.payloadRender(model);
+      }
+
+      //构造按钮权限
+      let permission = item.permission;
+      if (typeof permission == 'function') {
+        permission = permission(model);
+      }
+
+      //如果按钮有定义了自己的事件，将执行按钮自己的事件。
+      if(typeof item.OnClick == 'function'){
+        return(
+          service.authz(permission) &&
+          <StyledButton key={ modelName+'-viewbtn-'+index }
+                        type={item.style || 'primary'}
+                        icon={item.icon || null}
+                        onClick={item.OnClick}
+          >
+            {item.title}
+          </StyledButton>
+        );
+      }
+
+      return(
+        service.authz(permission) &&
+        <StyledButton key={ modelName+'-viewbtn-'+index }
+          type={item.style || 'primary'}
+          icon={item.icon || null}
+          onClick={ () => handleButtonClick(item.type, payload) }
+        >
+          {item.title}
+        </StyledButton>
+      );
+    })
+  }
+
+  //构造新增按钮
+  function renderNewButton() {
+    if (!actionBar.new) return null;
+    //构造按钮发送消息的参数
+    let payload;
+    if (actionBar.newPayloadRender) {
+      payload = actionBar.newPayloadRender(model);
+    }
+
+    return(
+      service.authz(actionBar.permission) &&
+      <StyledButton key={modelName+'NewButton'} type={actionBar.newStyle || 'primary'}
+        onClick={ () => handleButtonClick('new', payload) }
+      >{actionBar.newButtonTitle || '新增'}</StyledButton>
+    );
+  }
+
+  //构造删除按钮
+  function renderDeleteButton() {
+    if (!actionBar.delete || !model.selectedRowKeys || model.selectedRowKeys.length == 0)
+      return null;
+
+    //构造按钮发送消息的参数
+    let payload;
+    if (actionBar.deletePayloadRender) {
+      payload = actionBar.deletePayloadRender(model);
+    }
+
+    return(
+      service.authz(actionBar.permission) &&
+      <StyledButton key={modelName+'DeleteButton'} type={actionBar.saveStyle || 'danger'}
+        onClick={ () => handleDeleteButtonClick(payload) }
+      >
+        {actionBar.deleteButtonTitle || '删除'}
+        ({model.selectedRowKeys.length}条记录)
+      </StyledButton>
+    );
+  }
+
+  //处理按钮点击事件
+  function handleButtonClick(key, param) {
+    let payload = param || {};
+    payload.editMode = editMode;
+    payload.dataKey = uid;
+
+    if (key != 'reloadTable') {
+      dispatch({
+        type: modelName+'/'+key,
+        payload: payload
+      })
+      return;
+    }
+
+    Modal.confirm({
+      title: '操作确认',
+      content: '废弃对表格的修改并重新加载数据，是否确定？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk() {
+        dispatch({
+          type: modelName+'/'+key,
+          payload: payload
+        })
+      },
+    });
+  }
+
+  //处理删除按钮点击事件
+  function handleDeleteButtonClick(param) {
+    let payload = param || {};
+    payload.editMode = editMode;
+    payload.dataKey = uid;
+
+    Modal.confirm({
+      title: '删除确认',
+      content: '将要删除选中的'+model.selectedRowKeys.length+'条记录，是否确定？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk() {
+        //发送删除消息
+       dispatch({
+          type: modelName+'/bulkdelete',
+          payload: payload,
+        })
+      },
+    });
+  }
+}
+
+import PropTypes from 'prop-types';
+ActionButtons.propTypes = {
+  actionBar: PropTypes.object.isRequired,
+  editMode: PropTypes.string,
+  modelName: PropTypes.string.isRequired,
+  model: PropTypes.object.isRequired,
+  dispatch: PropTypes.func.isRequired,
+}
+
+export default ActionButtons;

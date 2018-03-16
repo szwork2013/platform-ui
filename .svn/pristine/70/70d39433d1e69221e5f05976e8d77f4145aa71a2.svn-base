@@ -1,0 +1,25 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+//权限模型定义
+const namespace = {
+  name: 'car_cars',
+  title:'车辆',
+  clazz: 'Car',
+  linkAttrs: ['orgs'],
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+
+    },
+    sort: 'o.licensePlate,asc', //缺省排序
+    size: 20, //指定每页记录数
+  },
+  form: Form, //使用的表单
+  //打开窗口标题生成器
+  titleRender: (record) => !record.licensePlate ? '新车辆' :'车辆：'+record.licensePlate,
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

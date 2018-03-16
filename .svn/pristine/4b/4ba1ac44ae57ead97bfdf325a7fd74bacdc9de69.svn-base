@@ -1,0 +1,36 @@
+import { Popover, Icon} from 'antd';
+
+import {StyledPopoverDiv} from './styled';
+
+//帮助气泡卡片
+const HelpPopover = (props) => {
+	const {
+		visible,
+		content,
+		children,
+		...rest
+	} = props;
+
+	//构造内容组件
+	let contentComponent = (
+		<StyledPopoverDiv>
+			<Icon type='info-circle-o'/>
+			{content}
+		</StyledPopoverDiv>	
+	);
+
+	//显示UI
+	return(
+    visible ?
+      <Popover {...rest} visible={visible}
+      	content={contentComponent}
+      	getPopupContainer={(triggerNode)=>triggerNode? triggerNode : document.body}
+      >
+        {children}
+      </Popover>
+    :
+      <div>{children}</div>
+  );
+}
+
+export default HelpPopover;

@@ -1,0 +1,32 @@
+import { modelTemplate, config} from 'utils';
+import service from 'service';
+import Form from '../../expenditure/execution/Form';
+const { api } = config; //取得RESTful api配置信息
+const namespace = {
+  name: 'executionScreen', //模型的命名空间
+  title: '立项数据清理', //模型的名称
+  clazz: 'Execution',
+  dataSource: 'expenditure_executions', //数据源
+};
+
+const modelParam = {
+  form: Form, //使用的表单
+  effects : {
+    *mydelete({type,payload}, {select, call, put}) {
+      let {selectedRows} = yield select(({executionScreen}) => executionScreen);
+      if(selectedRows.length > 0){
+        let params = '?1=1';
+        for(var i=0; i<selectedRows.length;i++){
+          params = params +'&ids='+selectedRows[i].id;
+        }
+        let {rootPath} = api;
+        rootPath = rootPath.substring(0,rootPath.indexOf('api'));
+        rootPath = rootPath + 'expenditure_executions/deleteExecutions'+params;
+        yield call(service.httprequest,rootPath);
+        yield put({type:"query",payload:{}});
+      }
+    }
+  }
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

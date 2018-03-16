@@ -1,0 +1,138 @@
+import React from 'react';
+import { Button,Checkbox} from 'antd'
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+import {View} from 'components';
+import {
+  StyledTable as Table, 
+  StyledTr as Row,
+  StyledLabelTd as LabelCol,
+  StyledTd as Col,
+} from '../../../../styled';
+
+import service from 'service';
+import wfservice from 'wfservice';
+
+//权限定义表单
+class ReportView extends React.Component{
+  //构造函数：初始化组件
+  constructor(props) {
+    super(props);
+ 
+  }
+
+  componentWillMount() {
+   let{
+      dispatch,
+      sheetCode
+    }=this.props;
+    dispatch({
+      type:'budget_reportView/getSheetCols',
+      payload:{
+        sheetCode:sheetCode,
+      }
+    });
+  }
+
+  render() {
+    //1 解构参数
+    let {
+      canEdit = true, //FormContainer注入：是否可编辑
+      dispatch,
+      getFieldDecorator,
+      setFieldsValue,
+      formCanEdit,
+      sheetCode,
+      columnInfo,
+    } = this.props;
+    debugger
+    //获取当前用户名
+    const userName = service.userInfo.user.name;
+        //翻页器属性
+    const paginationBarProps = false;
+    //定义操作条属性
+    const actionBarProps = {
+      new: false, //显示新增按钮
+      delete: false, //显示删除按钮
+      newRow: false,
+      newPayloadRender: () => {return {processNo:'contractFlow'}}
+  }
+
+  //获取当前用户id
+  const userId=service.userInfo.user.id;
+  let searchParam = {
+      filter:'',
+      search: 'getSheetRowData',
+      sheetCode,
+    };
+     //定义列表属性
+columnInfo=[ {
+  children : [{
+    children :[ {
+      dataIndex :'A',
+      id : 10003,
+      title : '初始',
+      parentId :2,
+      key:'A'
+    }, {
+      dataIndex :'B',
+      id :10004,
+      title:'平衡',
+      parentId:2,
+      key:'B'
+    } ],
+    title : '其他业务支出',
+  }, {
+    children : [ {
+      dataIndex:'C',
+      id : 10005,
+      title:'初始',
+      parentId:3,
+      key:'C'
+    }, {
+      dataIndex:'D',
+      id:10006,
+      title:'平衡',
+      parentId: 3,
+      key:'D'
+    }],
+    title : '管理费用',
+  } ],
+  dataIndex:'',
+  title:'部门填报',
+  key:''
+}];
+
+
+  let listProps = {
+    columns:columnInfo,
+    colDefaultLink: 'open',
+  };
+
+    //显示UI
+    return (
+      <div>
+        <div>11111111111</div>
+        <View {...this.props}
+          key='default'
+          searchParam ={searchParam}
+          modelName='budget_reportView' //模型名称
+          heightOffset={-30}
+          style={{height:'500px',color:'red'}}
+          actionBar={actionBarProps} //操作条定义
+          editMode='col' //编辑模式：单行编辑
+          list={listProps} //列表定义
+          paginationBar={paginationBarProps} //翻页器定义
+        />
+                <div>2222</div>
+        </div>
+    )
+   } 
+}// end of class
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({budget_reportView,budget_reportView:{columnInfo}}) =>
+  ({budget_reportView,columnInfo})
+)(ReportView);

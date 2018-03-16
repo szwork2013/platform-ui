@@ -1,0 +1,88 @@
+import React from 'react';
+import { Input, Checkbox, InputNumber, DatePicker, Alert} from 'antd';
+import {
+  ModuleLayout,
+  Tree,
+  View,
+  DropdownSelect,
+} from 'components';
+import service from 'service';
+import modelDefinition from '../../../task/model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+let deptId = service.userInfo.user.org.id;
+class ViewComponent extends React.Component {
+
+  render() {
+    const props = this.props;
+    //定义操作条属性
+    const actionBarProps = {
+      new: false, //显示新增按钮
+      delete: false, //显示删除按钮
+      newRow: false,
+      search:false
+    }
+
+    let switchTab = undefined;
+    let sortNo = 1;
+    const sortNoRender = (text,record) =>{
+      if(!switchTab){
+        switchTab = record.deptName;
+      }
+      if(switchTab !== record.deptName){
+        switchTab = record.deptName;
+        sortNo = 1;
+      }
+      return sortNo++;
+    }
+    const stateRender = (value ,record) =>{
+      if(value === 'END')
+        return <Alert message="已完成" type="success" showIcon />;
+      else
+        return <Alert message="审核中" type="warning" showIcon />;
+    }
+    //定义列表属性
+    const listProps = {
+      columns:[
+        {title: '序号', dataIndex: 'sortNo', key: 'sortNo', width:70, render:sortNoRender},
+        { title: '任务名称', dataIndex: 'name', key: 'name', link: 'view', width:300},
+        {title: '任务详情', dataIndex: 'description', key: 'description', link: 'view'},
+        {title: '任务状态', dataIndex: 'state', key: 'state', width:140, render:stateRender},
+        {title: '完成时间', dataIndex: 'doneTime', key: 'doneTime', link: 'view', width:'150'}
+      ],
+    };
+    //翻页器属性
+    const paginationBarProps = { pagination: true };
+    //定义过滤条件
+    const searchParam = {
+      filter: undefined,
+      search: 'getTaskList',
+      size: 30, //指定每页记录数
+      //排序规则：sortNo升序
+      alias: 'f',
+      state: '!= 2',
+      deptId:deptId,
+      sort: 'f.dept asc'
+    };
+    return (
+      <div style={{padding: '1px', marginTop:'-30px'}}>
+        <View key={modelName+'ViewLayout'} {...props}
+          searchParam={searchParam}
+          modelName={modelName} //模型名称
+          editMode='row' //编辑模式：单行编辑
+          actionBar={actionBarProps} //操作条定义
+          paginationBar={true} //翻页器定义
+          list={listProps} //列表定义
+          heightOffset={-10}
+        />
+      </div>
+    )
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({tasks, loading, apptabs:{tabs}}) =>
+  ({tasks, loading: loading.models[modelName], tabs})
+)(ViewComponent);

@@ -1,0 +1,64 @@
+import {routerRedux} from 'dva/router';
+import {Button} from 'antd';
+import { View } from 'components';
+import {
+  StyledHeaderDiv,
+} from './styled';
+import service from 'service';
+import modelDefinition from './model';
+//取得模型名称
+const modelName = modelDefinition.namespace;
+//结果视图
+const ListView = ( props ) => {
+  const { conditionData,dispatch, model} = props;
+  const {record} = model;
+  let href = record._links.self.href;
+  var taskId = href.substring(href.lastIndexOf('/')+1, href.length);
+  //定义操作条属性
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: false, //显示删除按钮
+    newRow: false,
+    search:false
+  }
+
+  //定义列表属性
+  const listProps = {
+    columns:[
+      {title: '年', dataIndex: 'year', key: 'year', width:30},
+      {title: '周', dataIndex: 'week', key: 'week', width:30},
+      {title: '本周完成情况', dataIndex: 'workLog', key: 'workLog', width:150},
+      {title: '下周工作计划', dataIndex: 'workPlan', key: 'workPlan', width:150},
+    ],
+  };
+
+  //翻页器属性
+  const paginationBarProps = {
+    controlProps:{
+      simple:true,
+    }, 
+    reloadButton:false,
+  };
+  const searchParam = {
+    filter: {
+      where:`o.task.id = ${taskId}`
+    },
+    sort:['o.year,desc', 'o.week,desc'],
+    size: 53, //指定每页记录数
+  };
+  return (
+    <View key={modelName+'ViewLayout'} {...props}
+      searchParam={searchParam}
+      modelName={modelName} //模型名称
+      editMode='row' //编辑模式：单行编辑
+      actionBar={actionBarProps} //操作条定义
+      paginationBar={paginationBarProps} //翻页器定义
+      list={listProps} //列表定义
+    />
+  )
+}
+
+import { connect } from 'dva';
+export default connect(({apptabs, taskfeedbacks, loading}) =>
+  ({apptabs, taskfeedbacks, loading:loading.models.taskfeedbacks})
+)(ListView);

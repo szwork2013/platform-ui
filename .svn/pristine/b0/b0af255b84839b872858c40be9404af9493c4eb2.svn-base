@@ -1,0 +1,69 @@
+import {Select} from 'antd';
+import { Tree } from 'components';
+
+const CategoryTree = ({
+  conditionData,
+  dispatch,
+}) => {
+
+  const expenditureType = conditionData.expenditureType;
+  if (!expenditureType) return null;
+  
+  //定义机构树的属性
+  const type = expenditureType=='infrastructure' ? 0:1;
+  const treeProps = {
+    key: expenditureType,
+    parentKey: 'parent',
+    modelName: 'expenditure_categories',
+    dynamicLoading: false, //是否动态加载数据
+    defaultExpandAll: false,
+    expandAllDescendants: false, //点击展开所有后代节点
+    searchParam: {
+      filter: {
+        where: 'o.endDate is null and o.type='+type,
+      },
+      sort: ' o.sortNo,asc',
+      size: 1000, //指定每页记录数
+    },
+  }
+
+  treeProps.onSelect=handleSelect;
+
+  return(
+    <div>
+    {expenditureType?
+      <Tree {...treeProps} />
+      :
+      null
+    }
+    </div>
+  )
+  
+  //节点选择事件处理
+  function handleSelect(id, e, extra) {
+    let record = e.node.props.dataRef;
+    let category = null;
+    if(e.selected){ //选中了一个节点
+      let paramRecord = {}
+      category = {
+        id, //记录的id
+        href: record.value, //记录的链接
+        fullName: record.fullName, //分类的全名
+      }
+      //发消息获取选中节点的后代节点的id列表
+      dispatch({ type: 'expenditure_queryform/getIdListOfDescendants', payload:{category} });
+    }
+    else {
+      //发消息修改模型的category
+      dispatch({ type: 'expenditure_queryform/changeConditionData', payload:{category} });
+    }
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({
+  expenditure_queryform:{conditionData}
+}) =>
+  ({conditionData})
+)(CategoryTree);

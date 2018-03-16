@@ -1,0 +1,132 @@
+import React from 'react'
+import PropTypes from 'prop-types'
+
+import {Redirect, Route, Switch} from 'dva/router';
+import dynamic from 'dva/dynamic';
+import Layout from './Layout';
+import {modelRegister} from 'utils';
+import itemModel from './config/item/model';
+import reportModel from './report/model';
+import itemrealdataUnitMyModel from './report/itemrealdata/unit/my/model';
+
+modelRegister(itemModel);
+modelRegister(reportModel);
+modelRegister(itemrealdataUnitMyModel);
+
+const mainRoute = (props) => {
+  const {match} = props;
+
+  //动态加载路由
+  const itemrealdataUnitMyRoute = dynamic({
+    app,
+    component: () => import('./report/itemrealdata/unit/my')
+  });
+
+  const yeardemandCompanyRoute = dynamic({
+    app,
+    component: () => import('./report/yeardemand/company/my')
+  });
+
+  const yeardemandAllUnitRoute = dynamic({
+    app,
+    component: () => import('./report/yeardemand/unit/all')
+  });
+
+  const yeardemandMyUnitRoute = dynamic({
+    app,
+    component: () => import('./report/yeardemand/unit/my')
+  });
+
+  const yeardemandAllCantonalRoute = dynamic({
+    app,
+    component: () => import('./report/yeardemand/charge/all')
+  });
+
+  const yeardemandMyCantonalRoute = dynamic({
+    app,
+    component: () => import('./report/yeardemand/charge/my')
+  });
+
+  const yeardemandAlldDeptRoute = dynamic({
+    app,
+    component: () => import('./report/yeardemand/dept/all')
+  });
+
+  const yeardemandMydDeptRoute = dynamic({
+    app,
+    component: () => import('./report/yeardemand/dept/my')
+  });
+  const budgetSheetRoute = dynamic({
+    app,
+    component: () => import('./config/sheet')
+  });
+  const budgetItemRoute = dynamic({
+    app,
+    component: () => import('./config/item')
+  });
+  const budgetRepresentRoute = dynamic({
+    app,
+    component: () => import('./config/represent')
+  });
+  const budgetOrgMatchRoute = dynamic({
+    app,
+    component: () => import('./config/orgmatch')
+  });
+  const budgetItemChargeRoute = dynamic({
+    app,
+    component: () => import('./config/itemcharge')
+  });
+  const budgetSheetGroupRoute = dynamic({
+    app,
+    component: () => import('./config/sheetgroup')
+  });
+
+  const rootPath = match.path;
+  return (
+    <Layout {...props}>
+      <Switch>
+        <Redirect
+          exact
+          from={rootPath}
+          to={rootPath + '/report/yeardemand/company'}
+          push={true}/>
+        <Route
+          path={rootPath + '/report/yeardemand/company'}
+          component={yeardemandCompanyRoute}/>
+        <Route
+          path={rootPath + '/report/itemrealdata/unit/my'}
+          component={itemrealdataUnitMyRoute}/>
+        <Route
+          path={rootPath + '/report/yeardemand/unit/all'}
+          component={yeardemandAllUnitRoute}/>
+        <Route
+          path={rootPath + '/report/yeardemand/unit/my'}
+          component={yeardemandMyUnitRoute}/>
+        <Route
+          path={rootPath + '/report/yeardemand/charge/all'}
+          component={yeardemandAllCantonalRoute}/>
+        <Route
+          path={rootPath + '/report/yeardemand/charge/my'}
+          component={yeardemandMyCantonalRoute}/>
+        <Route
+          path={rootPath + '/report/yeardemand/dept/all'}
+          component={yeardemandAlldDeptRoute}/>
+        <Route
+          path={rootPath + '/report/yeardemand/dept/my'}
+          component={yeardemandMydDeptRoute}/>
+        <Route path={rootPath + '/config/sheet'} component={budgetSheetRoute}/>
+        <Route path={rootPath + '/config/item'} component={budgetItemRoute}/>
+        <Route path={rootPath + '/config/represent'} component={budgetRepresentRoute}/>
+        <Route path={rootPath + '/config/orgmatch'} component={budgetOrgMatchRoute}/>
+        <Route path={rootPath + '/config/itemcharge'} component={budgetItemChargeRoute}/>
+        <Route path={rootPath + '/config/sheetgroup'} component={budgetSheetGroupRoute}/>
+      </Switch>
+    </Layout>
+  )
+}
+mainRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default mainRoute;
+

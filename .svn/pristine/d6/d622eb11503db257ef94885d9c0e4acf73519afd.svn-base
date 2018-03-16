@@ -1,0 +1,151 @@
+import React from 'react';
+import {Button, Col, Form as AntdForm, Input} from 'antd';
+import {Form as FormLayout,FormItem} from 'components';
+import config from 'config';
+import {connect} from 'dva';
+
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+const Search = Input.Search;
+const {api} = config; //取得RESTful api配置信息
+let {rootPath} = api;
+rootPath = rootPath.substring(0, rootPath.length - 4);
+
+//选项设置表单
+const OptionsForm = (props) => {
+  //解构参数
+  let {
+    conditionData = {}, //条件数据
+  } = props;
+
+  //构造FormItem的公共参数
+  const oneItemWidth = ['96%', '10%', '90%'];
+
+  const {getFieldDecorator, setFieldsValue} = props.form;
+  const itemProps = {
+    canEdit: true, getFieldDecorator, setFieldsValue, width: oneItemWidth,
+    controlProps: {allowClear: true}, required: false,
+  };
+
+  return (
+    <Form layout='inline' style={{height: '44px'}}>
+      <Row>
+        <Col span={2}>
+          {getExportExcel()}
+        </Col>
+        <Col span={3}>
+          {renderYearSelect()}
+        </Col>
+        <Col span={3}>
+          {renderMonthSelect()}
+        </Col>
+        <Col span={5}>
+          {renderDeptSelect()}
+        </Col>
+        <Col span={3}>
+          {renderFilterSelect()}
+        </Col>
+      </Row>
+    </Form>
+  )
+
+
+  //构造年度选择组件
+  function renderYearSelect() {
+    //构造年度的选项
+    let date = new Date();
+    let curYear = date.getFullYear();
+    let options = [];
+    for (let i = curYear - 5; i <= curYear; i++) {
+      let option = {'id': i, 'name': i};
+      options.push(option);
+    }
+    return (
+      <FormItem type='Select' initialValue={curYear} required={false}
+                title='' options={options} {...itemProps} itemKey='year' placeholder='选择年度'
+      />
+    );
+
+
+  }
+
+  //构造月份选择组件
+  function renderMonthSelect() {
+    let date = new Date();
+    let monthOptions = [];
+    for (let i = 12; i > 0; i--) {
+      let option = {'id': i, 'name': i + '月'};
+      monthOptions.push(option);
+    }
+    return <FormItem type='Select' initialValue={[date.getMonth()]} width={oneItemWidth} required={false} title=''
+                     options={monthOptions} {...itemProps} itemKey='month' placeholder='选择月份'/>
+  }
+
+  //构造类型选择组件
+  function renderDeptSelect() {
+    let typeOptions = [
+      {id: 0, name: '其他业务支出'},
+      {id: 1, name: '管理费用'},
+      {id: 2, name: '营业外支出'},
+    ];
+    return <FormItem type='Select' initialValue={[0]} width={oneItemWidth} required={false} title=''
+                     options={typeOptions} {...itemProps} itemKey='useType' placeholder='选择类型'/>
+  }
+
+  //构造关键字过滤组件
+  function renderFilterSelect() {
+    return (
+      <Search
+        placeholder="请输入过滤指标关键字"
+        onSearch={value => props.dispatch({
+          type: 'indicator_report/changeConditionData',
+          payload: {value}
+        })}
+        style={{width: 200}}
+
+      />
+    );
+  }
+
+  //构造Excel导入
+  function getExportExcel() {
+    return (
+      <Button type="primary" onClick={() => {
+      }}>导出</Button>
+    );
+  }
+}
+
+
+//表单字段被修改事件处理
+const onFieldsChange = (props, fields) => {
+  //解构参数
+  const {
+    dispatch,
+  } = props;
+
+  let changed;
+
+  let changedData = {};
+  for (let x in fields) {
+    changedData[fields[x].name] = fields[x].value;
+    changed = true;
+  }
+  if (changed) {
+    //发消息通知模型条件发生变化
+    dispatch({
+      type: 'itemrealdata/changeConditionData',
+      payload: {...changedData}
+    })
+  }
+}
+
+const antdOptionsForm = AntdForm.create({
+  onFieldsChange: onFieldsChange
+})(OptionsForm);
+
+
+export default connect(({itemrealdata}) =>
+  ({itemrealdata})
+)(antdOptionsForm);

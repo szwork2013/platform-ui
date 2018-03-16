@@ -1,0 +1,126 @@
+import { Form as FormLayout, FormItem } from 'components';
+
+const FormContainer = FormLayout.FormContainer;
+const Row = FormContainer.StyledRow;
+const Form = FormContainer.StyledForm;
+
+import service from 'service';
+
+//权限定义表单
+let standard = [
+  { 'id': '部级800元每人每晚', 'name': '部级800元每人每晚' },
+  { 'id': '厅局级480元每人每晚', 'name': '厅局级480元每人每晚' },
+  { 'id': '处级400元每人每晚', 'name': '处级400元每人每晚' },
+  { 'id': '科级及以下330元每人每晚', 'name': '科级及以下330元每人每晚' },
+  { 'id': '部级400元每人每次', 'name': '部级400元每人每次' },
+  { 'id': '厅局级300元每人每次', 'name': '厅局级300元每人每次其他' },
+  { 'id': '处级及以下200元每人每次', 'name': '处级及以下200元每人每次' },
+  { 'id': '科级150元每人每次', 'name': '科级150元每人每次' },
+  { 'id': '战略客户400元每人', 'name': '战略客户400元每人' },
+  { 'id': '厅重要客户300元每人', 'name': '厅重要客户300元每人' },
+  { 'id': '一般客户200元每人', 'name': '一般客户200元每人' }
+];
+
+let peopleNumber = [];
+for (let i = 0; i < 31; i++) {
+  let people = i + '人'; //人数选项
+  peopleNumber.push({ 'id': i, 'name': people });
+}
+
+let diningNumber = []; //用餐数选项
+for (let i = 0; i < 21; i++) {
+  let dining = i + '餐';
+  diningNumber.push({ 'id': i, 'name': dining });
+}
+
+const ItemForm = (props) => {
+  //解构参数
+  let {
+    model, //FormContainer注入：模型
+    canEdit = true, //FormContainer注入：是否可编辑
+    dispatch,
+    getFieldDecorator,
+    setFieldsValue,
+	} = props;
+  //构造FormItem的公共参数
+
+  const { record, state } = model;
+  //修改业务招待费的申请部门修改为申请人且不可编辑
+  //const userDeptName = service.userInfo.user.org.orgName;
+  const userDeptName = service.userInfo.user.name;
+  const itemProps = { canEdit, required: true, getFieldDecorator, setFieldsValue };
+  const oneItemWidth = ['95%', '30%', '65%'];
+  //record._department=userDeptName;
+  record._department = userDeptName;
+
+  //显示UI
+  return (
+    <Form layout='inline' style={{ height: '100%' }}>
+      <div>
+        <Row>
+          <FormItem type='DatePicker' {...itemProps} width={oneItemWidth}
+            title='招待开始时间'
+            placeholder='' itemKey='_conference_startTime'
+          />
+        </Row>
+        <Row>
+          <FormItem type='DatePicker' {...itemProps} width={oneItemWidth}
+            title='招待结束时间'
+            placeholder='' itemKey='_conference_endTime'
+          />
+        </Row>
+        {/* 修改：申请部门修改为申请人 修改人yjx 2017.12.24 */}
+        {/* <Row>
+        <FormItem type='Input' {...itemProps} width={oneItemWidth}
+          title='申请部门'
+          placeholder='' itemKey='_department' initialValue={userDeptName}
+        />
+      </Row> */}
+        <Row>
+          <FormItem type='Input' {...itemProps} width={oneItemWidth} canEdit={false}
+            title='申请人'
+            placeholder='' itemKey='_department' initialValue={userDeptName}
+          />
+        </Row>
+        <Row>
+          <FormItem type='Select' {...itemProps} width={oneItemWidth}
+            title='陪同人数' options={peopleNumber}
+            placeholder='' itemKey='_withPeoples' initialValue={record._withPeoples}
+          />
+        </Row>
+        <Row>
+          <FormItem type='Input' {...itemProps} width={oneItemWidth}
+            title='招待对象'
+            placeholder='' itemKey='_people'
+          />
+          <Row>
+          </Row>
+          <FormItem type='Input' {...itemProps} width={oneItemWidth}
+            title='招待对象级别'
+            placeholder='' itemKey='_peopleType'
+          />
+        </Row>
+        <Row>
+          <FormItem type='Select' options={peopleNumber} {...itemProps} width={oneItemWidth}
+            title='招待人数'
+            placeholder='' itemKey='_peopleNum' initialValue={record._peopleNum}
+          />
+        </Row>
+        <Row>
+          <FormItem type='Select' options={diningNumber} {...itemProps} width={oneItemWidth}
+            title='用餐数'
+            placeholder='' itemKey='_diningNum' initialValue={record._diningNum}
+          />
+        </Row>
+        <Row>
+          <FormItem type='Select' options={standard} {...itemProps} width={oneItemWidth}
+            title='招待标准' multiple={true}
+            placeholder='' itemKey='_standard' initialValue={record._standard}
+          />
+        </Row>
+      </div>
+    </Form>
+  );
+}
+
+export default ItemForm;

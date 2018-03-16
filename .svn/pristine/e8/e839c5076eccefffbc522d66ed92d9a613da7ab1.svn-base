@@ -1,0 +1,45 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+//模型定义
+const namespace = {
+  name: 'itemrealdata',
+  title:'预算实际发生数据',
+  clazz: 'ItemRealData', //模型对应的后台实体类
+  conditionData:{}, //查询条件数据
+};
+
+const modelParam = {
+  recordProjection:'list',
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+
+    },
+    size: 20, //指定每页记录数
+    sort: 'o.id,asc' //缺省排序规则
+  },
+  form: Form, //使用的表单
+  titleRender: (record)=>record&&record.id? record.name:'新预算实际发生数据',
+  effects: {
+    //修改条件数据消息
+    *changeConditionData({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      conditionData={...conditionData,...payload};
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });
+
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = [];
+      yield put({
+        type: 'indicator_monthlyindicator/query',
+        payload: {searchParam}
+      })
+    },
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

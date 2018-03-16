@@ -1,0 +1,8 @@
+import CommentItemList from './CommentItemList';
+import CommentItem from './CommentItem';
+import {theme} from './styled';
+
+CommentItemList.theme = theme;
+CommentItemList.CommentItem = CommentItem;
+
+export default CommentItemList;

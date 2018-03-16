@@ -1,0 +1,229 @@
+import React from 'react';
+import { Input, Checkbox, InputNumber, Progress} from 'antd';
+import {
+  ModuleLayout,
+  Tree,
+  View,
+  Attachment
+} from 'components';
+
+import service from 'service';
+
+//取得模型名称
+import modelDefinition from '../model';
+const modelName = modelDefinition.namespace;
+//获取当前用户部门ID
+const deptId=service.userInfo.user.org.id;
+class ViewComponent extends React.Component {
+  render() {
+    const props = this.props;
+
+    //定义操作条属性
+    const actionBarProps = {
+      new: false, //显示新增按钮
+      delete: false, //显示删除按钮
+      newRow:false,
+      searchBar: false,
+    }
+
+    const listProps = {
+      columns:[ // 和antd table组件的列定义相同
+        {title: '编码',width:50,dataIndex: '_category.no', key: '_category.no'},
+        {title: '指标',width:200,dataIndex: '_category.name', key: '_category.name'},
+        {title: '上月填报值',width:200, dataIndex: 'value', key: 'value', editor:<Input.TextArea />,
+          editorRender: this.precedingValueEditorRender
+        },
+        {title: '填报值',width:200, dataIndex: 'value', key: 'value', editor:<Input.TextArea/>,
+          editorRender: this.valueEditorRender
+        },
+        {title: '上传附件', type:'attachment', dataIndex: '_files', key: '_files',
+          editor:<Attachment showDetail={false}/>, controlProps:{multiple: true}},
+        {title: '填报期限',width:150,dataIndex: '_category.deadline', key: '_category.deadline',
+          textRender: this.fillinStatusRender},
+      ],
+    };
+
+    //构造月份选择树
+    const treeProps = this.constructTreeProps();
+    const siderTree = (<Tree {...treeProps} />);
+
+    //翻页器属性
+    const paginationBarProps = false;
+
+    //设置sider属性
+    const title = (
+      <span style={{paddingLeft:10, color:'#108ee9'}}>填报月份</span>
+    );
+
+    const siderProps = {
+      title,
+      icon: false,
+      width: 120,
+      className:'background: #fbfbfb !important;',
+      titleBar:{
+        className:'background: #ebf8f9 !important;'
+      }
+    };
+    let date = new Date();
+    var searchParam = {
+      filter: undefined,
+      search: 'getDeptMonthly',
+      year: date.getFullYear(),
+      month: date.getMonth()+1,
+      deptId : deptId
+    };
+    return (
+      <ModuleLayout menu={siderTree} enableCollapsed={false} siderProps={siderProps}>
+        <View key={'MonthlyFillinView'} {...props}
+          notQueryData={false}
+          searchParam ={searchParam}
+          modelName={modelName} //模型名称
+          heightOffset={-ModuleLayout.theme.content.padding}
+          actionBar={actionBarProps} //操作条定义
+          paginationBar={paginationBarProps} //翻页器定义
+          editMode='col' //编辑模式：单行编辑
+          list={listProps} //列表定义
+        />
+      </ModuleLayout>
+    )
+  }
+
+  //填报状态显示构造函数
+  fillinStatusRender = (value, record) => {
+    let deadlineDays = record.deadlineDays;
+    let delay = record._category.delay;
+    deadlineDays = parseInt(deadlineDays)-delay;
+    let percent = (30+deadlineDays)/30*100;
+    percent = percent>100?100:percent;
+    percent = percent<0?0:percent;
+
+    if (!this.getIndicatorValue(record)) {
+      let info = percent==100?'逾期':'还有'+(0-deadlineDays)+'天';
+      return (
+        <span>
+          <Progress showInfo={percent!=100?false:true} style={{width:100}} percent={percent} status={percent==100? "exception":"active"}/>
+          {info}
+        </span>
+      )
+    }
+  }
+
+  //从记录中获取填报的指标值
+  getIndicatorValue(record) {
+    let value;
+    let category = record._category||{};
+    if(category.valueType==1){
+       value = record.numberValue;
+    }
+    else if(category.valueType==2){
+      if(record.initFormat == record.textValue){
+        value = undefined;
+      }else {
+        value = record.textValue;
+      }
+    }
+    return value;
+  }
+
+  //上月填报值的列的编辑器动态构造函数
+  precedingValueEditorRender = (text, record) => {
+    if (record._category.valueType==1) {
+      return {key: 'precedingNumberValue', editor:<Input.TextArea placeholder='请填写数字值' disabled='true' style={{color:'#BFBFBF'}}/>}
+    }
+    else {
+      return {key: 'precedingTextValue', editor:<Input.TextArea placeholder='请填写文本值' disabled='true' style={{color:'#BFBFBF'}} />}
+    }
+  }
+
+  //填报值的列的编辑器动态构造函数
+  valueEditorRender = (text, record) => {
+
+    let deadlineDays = record.deadlineDays;
+    let delay = record._category.delay;
+    deadlineDays = parseInt(deadlineDays)-delay;
+    let percent = (30+deadlineDays)/30*100;
+    percent = percent>100?100:percent;
+    percent = percent<0?0:percent;
+
+    if (!this.getIndicatorValue(record)) {
+      let info = percent==100?'逾期':'还有'+(0-deadlineDays)+'天';
+      if(record._category.valueType==1){
+        if(info == '逾期'){
+          return {key: 'numberValue', editor:<Input.TextArea placeholder='请填写数字值' disabled='true' />}
+        }else{
+          return {key: 'numberValue', editor:<Input.TextArea placeholder='请填写数字值' />}
+        }
+      }else {
+        if(info == '逾期'){
+          return {key: 'textValue', editor:<Input.TextArea placeholder='请填写文本值' disabled='true'/>}
+        }else{
+          return {key: 'textValue', editor:<Input.TextArea placeholder='请填写文本值' />}
+        }
+      }
+    }else {
+      if (record._category.valueType==1) {
+        return {key: 'numberValue', editor:<Input.TextArea placeholder='请填写数字值' />}
+      }
+      else {
+        return {key: 'textValue', editor:<Input.TextArea placeholder='请填写文本值'/>}
+      }
+    }
+  }
+
+  //构造月份树的属性
+  constructTreeProps = () => {
+    const props = this.props;
+
+    const treeProps = {
+      labelKey: 'name',
+      parentKey: 'parentId',
+      modelName: 'indicator_monthlyindicator',
+      searchParam: {
+        projection: 'default',
+        filter: undefined,
+        search:'getYearMonthTree',
+        sort: 'o.sortNo,asc',
+        size: 1000, //指定每页记录数
+      },
+      dynamicLoading: false,
+      defaultExpandAll: true,
+      defaultSelectFirst: true,
+      onSelect: this.handleTreeOnSelect,
+    };
+
+    return treeProps;
+  }
+
+  //处理树被选中事件
+  handleTreeOnSelect = (key, e, initQuery) => {
+    //获取所选行的值
+    const record = e.node.props.dataRef;
+    var fullName = record.fullName;
+
+    var year = fullName.split('-')[0];
+    var month = fullName.split('-')[1];
+
+    //请求视图的数据：返回指定组织机构下的所有分类
+    var searchParam = {
+      filter: undefined,
+      search: 'getDeptMonthly',
+      year: year,
+      month: month,
+      deptId:deptId
+    };
+
+    this.props.dispatch({
+      type: modelName+'/query',
+      payload: {
+        searchParam: searchParam,
+        where: initQuery ? '' : undefined,
+      }
+    });
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({indicator_monthlyindicator, loading, apptabs:{tabs}}) =>
+  ({indicator_monthlyindicator, loading: loading.models[modelName], tabs})
+)(ViewComponent);

@@ -1,0 +1,169 @@
+//模型：expenditure_draftform
+import service from 'service';
+import {statForDraft, constructSearchParam} from './service';
+
+export default {
+  namespace: 'expenditure_draftform',
+  state: {
+    selectInfo:'', //选项信息
+    statInfo: {}, //统计数据
+    conditionData:{}, //条件数据
+  },
+
+  reducers: {
+    save(state, {payload}) {
+      return {...state, ...payload}
+    }
+  },
+
+  effects: {
+    //初始化模型消息
+    *initialize({payload}, {select, call, put}) {
+      //初始化模型数据  
+      let conditionData={};
+      let selectInfo='';
+      let statInfo = {};
+
+      //设置年度为当前年度
+      let thisYear=new Date().getFullYear(); 
+      let year={'year': thisYear}
+      if (payload.expenditureType!='operating') {
+        year = {};
+      }
+
+      //设置支出类型
+      conditionData.expenditureType=payload.expenditureType;
+      conditionData = {...conditionData,...year};
+
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = [];
+      yield put({
+        type: 'expenditure_executions/query',
+        payload: {searchParam, initQuery: true}
+      })
+
+      //发消息通知queryform模型进行统计
+      yield put({
+        type: 'expenditure_queryform/statForQuery',
+        payload: {
+          conditionData : {
+            where: searchParam.filter.where,
+            searchWhere: conditionData.where
+          },
+          dataKey:'DraftFormViewStatInfo',
+        }
+      })
+      
+      //修改模型数据
+      yield put({
+        type: 'save',
+        payload: {conditionData, selectInfo, statInfo}
+      });
+    },
+
+    //修改条件数据消息
+    *changeConditionData({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+
+      conditionData={...conditionData,...payload};
+
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });
+
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = [];
+      if (!(conditionData.where||conditionData.where=='')) { //
+        yield put({
+          type: 'expenditure_executions/query',
+          payload: {searchParam}
+        })
+      }
+
+      //发消息通知queryform模型进行统计
+      yield put({
+        type: 'expenditure_queryform/statForQuery',
+        payload: {
+          conditionData : {
+            where: searchParam.filter.where,
+            searchWhere: conditionData.where
+          },
+          dataKey:'DraftFormViewStatInfo',
+        }
+      })
+
+      //发送消息获取起草统计信息
+      yield put({
+        type: 'statForDraft',
+        payload: {conditionData}
+      });
+
+    },
+
+    //获取选中节点及其所有后代节点的id列表    
+    *getIdListOfDescendants({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      
+      //取出选中节点的id
+      const category = payload.category;
+      if (!category || !category.id) return;
+
+      //构造查询条件
+      let id = category.id;
+      let where = `o.id=${id} or parent.id=${id} or parentparent.id=${id} or parentparentparent.id=${id}`;
+      
+      let categoryModel = yield select(({expenditure_categories}) => expenditure_categories);
+      let searchParam = categoryModel.searchParam;
+      searchParam.filter.where = where;
+      searchParam.projection = 'IdList';
+      searchParam.size = 1000;
+      searchParam.filter.jpql = null;
+
+      //调用服务查询符合条件的分类列表
+      let newSearchParam = service.autoConfigSearchParam({searchParam, state:categoryModel});
+
+      let data = yield call(service.queryPage, 'expenditure_categories',
+        {...newSearchParam});
+      if (data == null) return;
+      data = service.parseRestResult(data);
+
+      //构造id列表
+      let idList = [];
+      for (let c of data.list) {
+        idList.push(c.id);
+      }
+
+      category.idList = idList;
+      conditionData.category = category;
+
+      yield put({
+        type: 'changeConditionData',
+        payload: {...conditionData}
+      });
+    },
+
+    //消息处理：获取起草统计信息
+    *statForDraft({payload}, {select, call, put}) {
+      const {year, category, fundSource, expenditureType} = payload.conditionData;
+      
+      if (expenditureType=='operating'&&!(year && category && fundSource)) return;
+      if (expenditureType!='operating'&&!(category && fundSource)) return;
+      
+      //调用服务获取统计信息
+      let statInfo = yield call(statForDraft, payload.conditionData);
+      if (statInfo == null) return;
+
+      //修改模型的统计信息
+      yield put({
+        type: 'save',
+        payload: {statInfo}
+      });
+    },
+
+  }, // end of effects
+};

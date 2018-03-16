@@ -1,0 +1,17 @@
+import styled from 'styled-components';
+import {Button} from 'antd';
+
+const theme = {
+  fontSize: 14,
+  marginLeft : 5,
+}
+
+const StyledButton = styled(Button)`
+	font-size: ${theme.fontSize}px;
+	margin-left: ${theme.marginLeft}px;
+`;
+
+module.exports = {
+  StyledButton,
+  theme
+}

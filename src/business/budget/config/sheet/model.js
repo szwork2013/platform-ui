@@ -1,0 +1,18 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+//权限模型定义
+const namespace = {
+  name: 'budget_sheet',
+  title:'表配置',
+  clazz: 'Sheet',
+  linkAttrs: ['sheetgroup'],
+};
+
+const modelParam = {
+  form: Form, //使用的表单
+  //打开窗口标题生成器
+  titleRender: (record) => !record.name ? '新表配置' :record.name,
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

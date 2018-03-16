@@ -1,0 +1,142 @@
+import React from 'react';
+import { Input, Checkbox, InputNumber} from 'antd';
+import {
+  ModuleLayout,
+  Tree,
+  View,
+  Attachment
+} from 'components';
+
+import OptionsForm from './OptionsForm'
+import modelDefinition from '../model';
+
+import service from 'service';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+class ViewComponent extends React.Component {
+  componentDidMount() {
+   //解构参数
+    const {
+      dispatch,
+    } = this.props;
+    //初始化选项数据
+    dispatch({ type: 'indicator_yearlyindicator/initialize',payload:{}});
+
+  }
+  render() {
+    const props=this.props;
+    const {
+      dispatch,
+      yearOptions,
+      conditionData,
+    } = props;
+    //定义操作条属性
+    const actionBarProps = {
+      new: false, //显示新增按钮
+      delete: false, //显示删除按钮
+      newRow:false,
+      searchBar: false,
+    };
+
+    //定义列表属性
+    const listProps = {
+      columns:[ // 和antd table组件的列定义相同
+        { title: '年度',width:'100px', dataIndex: 'year', key: 'year'},
+        { title: '指标',width:'300px', dataIndex: 'name', key: 'name'},
+        { title: '计划值',dataIndex: 'estimateIndicator', key: 'estimateIndicator',editor:<Input/>,
+          editorRender: this.estimateValueEditorRender
+        },
+        {title: '年中调整值',dataIndex: 'adjustIndicator', key: 'adjustIndicator',editor:<Input/>,
+          editorRender: this.adjustValueEditorRender
+        },
+      ],
+    };
+
+    //翻页器属性
+    const paginationBarProps = {};
+    const dateStyleRender = (props) => `
+      background-color: #ecf6fd !important;
+      max-width:50px !important;
+    `;
+    return (
+    <div>
+     <OptionsForm style={{height:'40px'}} notQueryData={true} dispatch={dispatch} conditionData={conditionData} yearOptions={yearOptions}/>
+      <View style={{height:'90%'}}  key={modelName+'ViewLayout'} {...props}
+            modelName={modelName} //模型名称
+            actionBar={actionBarProps} //操作条定义
+            paginationBar={paginationBarProps} //翻页器定义
+            editMode='row' //编辑模式：单行编辑
+            list={listProps} //列表定义
+            heightOffset={-40}
+      />
+      </div>
+    )
+  }
+
+
+  //处理树被选中事件
+  handleTreeOnSelect = (key, e, initQuery) => {
+    //获取所选行的值
+    const record = e.node.props.dataRef;
+    let categoryId=service.getRecordId(record);
+    if (record.value) {
+      this.selectedOrgValue = record.value; //保存选中的机构的值
+      this.setState({refresh: true}) //刷新组件
+    }
+    const {conditionData}=this.props;
+    //请求视图的数据：返回指定组织机构下的所有分类
+    var searchParam = {
+      filter: {
+        where:'o.year =' + conditionData.year
+      },
+      search: 'findYearIndicator',
+      categoryId:categoryId
+    };
+
+    this.props.dispatch({
+      type: modelName+'/query',
+      payload: {
+        searchParam: searchParam,
+        where: initQuery ? '' : undefined,
+      }
+    });
+  }
+
+  //计划值
+  estimateValueEditorRender = (text, record) => {
+    let currentDate = new Date().getFullYear();
+    // alert(currentDate);
+    if(record.year-currentDate < 0){
+      return {key: 'estimateIndicator', editor:<Input placeholder='请填写数字值' disabled='true' style={{color:'#BFBFBF'}}/>}
+    }else{
+      return {key: 'estimateIndicator', editor:<Input placeholder='请填写数字值' style={{color:'#BFBFBF'}}/>}
+    }
+  }
+
+  //调整值
+  adjustValueEditorRender = (text, record) => {
+    let currentDate = new Date().getFullYear();
+    // alert(currentDate);
+    if(parseInt(record.year)-parseInt(currentDate) < 0){
+      return {key: 'adjustIndicator', editor:<Input placeholder='请填写数字值' disabled='true' style={{color:'#BFBFBF'}}/>}
+    }else{
+      return {key: 'adjustIndicator', editor:<Input placeholder='请填写数字值' style={{color:'#BFBFBF'}}/>}
+    }
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+function mapStateToProps(state) {
+  const { indicator_yearlyindicator } = state;
+  let {conditionData,yearOptions} = indicator_yearlyindicator
+  return {
+      loading: state.loading.models.indicator_yearlyindicator,
+      indicator_yearlyindicator,
+      conditionData,
+      yearOptions
+  };
+}
+export default connect(mapStateToProps)(ViewComponent);

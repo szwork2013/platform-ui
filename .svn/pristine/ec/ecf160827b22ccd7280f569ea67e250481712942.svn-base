@@ -1,0 +1,230 @@
+import React from 'react';
+import { DatePicker, Input } from 'antd';
+
+import {
+  View,
+  DropdownSelect,
+  ExportButton
+} from 'components';
+
+import service from 'service';
+import { config } from 'utils';
+const { api } = config; //取得RESTful api配置信息
+
+import MaterialSelect from '../../../common/MaterialSelect'
+
+import modelDefinition from '../../../common/PlanItems/model';
+import materialService from '../../../server';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+//权限定义表单
+class DrawItems extends React.Component {
+
+  componentDidMount() {
+
+  }
+
+  render() {
+    const { record, canEdit, mode, isEngineerSpec } = this.props;
+    let uid = service.getRecordId(record) + 'wzff' + record.type;
+
+    //定义操作条属性
+    let buttons = [];
+    //公司属性不定义新增
+    if (canEdit && mode != 'new') {
+        buttons.push({ title: '新增', OnClick: () => this.newItem() });
+    }
+    const actionBarProps = {
+      searchBar: false,
+      newRow: false,
+      new: false, //显示新增按钮
+      delete:  canEdit ? true : false, //显示删除按钮只有公司计划和单位计划
+      saveTable:canEdit ? true : false,
+      reloadTable:  canEdit ? true : false,
+      buttons,
+    }
+    if (mode != 'new') {
+      let exportUrl = this.constructExcelExportUrl(uid);
+      actionBarProps.export=<a href={exportUrl} style={{marginLeft:8}} target='_blank'>导出excel</a>;
+    }
+
+    //翻页器属性
+    const paginationBarProps = {};
+
+    //定义搜索条件
+    const searchParam = {
+      filter: { //过滤规则
+        clazz: 'PlanItem', //模型对应的后台实体类
+        where: this.constructWhere(), //条件
+      },
+      size: 100, //指定每页记录数
+      sort: 'o.id,asc', //缺省排序规则
+    };
+
+    //定义列表属性
+    const listProps = {
+      columns: this.constructColumns(),
+      rowSelection: canEdit && { type: 'checkbox' }, //选择功能配置
+      footer: this.constructFooter,
+    };
+
+    //显示UI
+    return (
+      <View key={'plantItem' + 'ViewLayout' + uid} {...this.props}
+        editMode={canEdit ? 'row' : false} //编辑模式：单行编辑
+        searchParam={searchParam}
+        modelName={modelName} //模型名称
+        actionBar={actionBarProps} //操作条定义
+        list={listProps} //列表定义
+        uid={uid}
+        paginationBar={paginationBarProps}
+      />
+    )
+  }
+
+  constructExcelExportUrl = (dataKey) => {
+    const { plan_item,} = this.props;
+    let viewData = plan_item.viewData.find((r) => r.dataKey == dataKey);
+    if (!viewData) return;
+    const searchParam = {
+      filter: { //过滤规则
+        clazz: 'PlanItem', //模型对应的后台实体类
+        where: this.constructWhere(), //条件
+      },
+      jpql: viewData.listJpql,
+      linkAttrs: [],
+      projection: 'list',
+      size: 100, //指定每页记录数
+      sort: 'o.id,asc', //缺省排序规则
+    };
+    //2 构造请求页的连接和参数
+    let param = service.constructQueryPageParam({
+      namespace: modelName,
+      params: searchParam,
+      where: searchParam.filter.where,
+    });
+    //3 构造完整的url
+    let { url, requestParam } = param;
+    const { rootPath } = api; //RESTful请求的根路径
+    url += '?jpql=' + requestParam.jpql + '&clazz=' + requestParam.clazz
+      + '&projection=' + searchParam.projection + '&size=' + searchParam.size
+      + '&sort=o.id,asc';
+
+    url = service.appendTokenInfoToUrl(url);
+    let dataSource = encodeURIComponent(url);
+
+    let templateNo = 'GXJHITHCD';
+    url = rootPath.replace('api', '') + 'template_excel/service/catalog?datasource='
+      + dataSource + '&templateNo=' + templateNo + '&userId=' + service.userInfo.user.id + '&returnFile=true'
+    return url;
+  }
+
+  constructColumns = () => {
+    const { canEdit, } = this.props;
+    //定义列表属性
+    let columns = [ // 和antd table组件的列定义相同
+      { title: '名称', width: 150, dataIndex: 'materialData.name', key: 'materialData.name' },
+      { title: '规格型号', dataIndex: 'materialData.specification', key: 'materialData.specification' },
+      {
+        title: '数量', width: 65, dataIndex: 'demandQuantity', key: 'demandQuantity',
+        editor: canEdit && <Input placeholder='请填写数字值' />
+      },
+      { title: '单位', width: 65, dataIndex: 'materialData.measurementUnit', key: 'materialData.measurementUnit' },
+      {
+        title: '单价（元）', width: 125, dataIndex: 'materialData.priceWithTax', key: 'materialData.priceWithTax',
+        textRender: (value, record) => !record._isGroup && Number(value).toFixed(2)
+      },
+      {
+        title: '总价(元)', width: 145, dataIndex: 'demandTotal', key: 'demandTotal',
+        textRender: (value, record) => {
+          if (record._isGroup) return '';
+          let totalAmount = record.materialData.priceWithTax * record.demandQuantity;
+          return totalAmount.toFixed(2);
+        }
+      },
+      {
+        title: '备注', width: 145, dataIndex: 'remarkx', key: 'remark',
+        editor: canEdit && <Input />
+      },
+    ];
+    return columns;
+  }
+
+  //构造条件
+  constructWhere = () => {
+    const {record } = this.props;
+    let recordId = service.getRecordId(record);
+    let where = 'o.draw.id=' + recordId;
+    return where;
+  }
+
+  //构造底部信息
+  constructFooter = (list) => {
+    if (!list) return '';
+    let footer = '';
+    let totalAmount = 0;
+    totalAmount = 0;
+    list.map((item) => {
+      totalAmount = totalAmount + (item.materialData.priceWithTax * item.demandQuantity);
+    });
+    totalAmount = totalAmount.toFixed(2);
+    footer = '合计金额：' + totalAmount + '元。';
+    return footer;
+  }
+
+  //新增行
+  newItem = () => {
+    const { record, dispatch } = this.props;
+    let type=record.type;
+
+    let where = 'o.year=' + new Date().getFullYear() + ' and o.type=' + materialService.convertTypeToInt(type);
+    let searchParam = { //搜索条件
+      filter: {
+        where,
+      },
+      linkAttrs: [],
+      size: 20, //指定每页记录数
+    };
+
+    let formProps = service.constructPropsOfForm('material', record);
+    formProps.record = record;
+    formProps.searchParam = searchParam;
+    formProps.objPropName = '_drawItems';
+
+    let recordUrl = service.getHrefOfLinkAttr(record);
+    let uid = service.getRecordId(record) + 'wzff' + type;
+
+    let foreignKey = 'draw';
+
+    //发送消息显示对话框
+    dispatch({
+      type: 'modaldialog/show',
+      payload: {
+        iconType: 'info-circle-o',
+        title: '选择' + materialService.convertTypeToString(type),
+        content: <MaterialSelect {...formProps} />,
+        onOk: () => {
+          dispatch({ type: 'modaldialog/save', payload: { visible: false } });
+          dispatch({
+            type: 'plan_item/addRows',
+            payload: {
+              rows: record[formProps.objPropName],
+              dataKey: uid,
+              planUrl: recordUrl,
+              foreignKey,
+            }
+          });
+        },
+        style: "width:800px !important;",
+      }
+    });
+  }
+
+}
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({ plan_item, loading }) =>
+  ({ plan_item, loading: loading.models[modelName] })
+)(DrawItems);

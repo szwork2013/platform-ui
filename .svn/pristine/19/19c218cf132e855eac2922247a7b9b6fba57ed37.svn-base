@@ -1,0 +1,29 @@
+import {modelTemplate, config} from 'utils';
+import Form from './Form';
+import service from 'service';
+const { api } = config; //取得RESTful api配置信息
+const namespace = {
+  name: 'task_report', //模型的命名空间
+  title: '任务汇报', //模型的名称
+  clazz: 'TaskReport', //模型对应的后台实体类
+  linkAttrs: ['task'],
+};
+
+const modelParam = {
+  form: Form, //
+  recordProjection: 'list',
+  titleRender: (record) => !record.taskName ? '新任务汇报' : '任务汇报:'+record.taskName,
+  searchParam: { //搜索条件
+    size: 20, //指定每页记录数
+    sort: 'id,asc' //缺省排序规则
+  },
+  effects:{
+    * initCount({payload}, {call, put, select}) {
+      let {rootPath} = api;
+      let initHref = `${rootPath}/task_report/init`;
+      yield call(service.httprequest, initHref, {});
+    }
+  }
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

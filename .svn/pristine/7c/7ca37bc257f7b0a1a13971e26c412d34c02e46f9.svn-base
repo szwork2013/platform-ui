@@ -1,0 +1,14 @@
+import { ModuleLayout } from 'components';
+
+//导航菜单定义
+const menuItems = [
+  { path: 'history', icon: 'file-history', title: 'Excel模板'},
+];
+
+const Layout = ( props ) => {
+  return (
+    <ModuleLayout trigger siderTitle='模板' menu={menuItems} {...props} />
+  )
+}
+
+export default Layout;

@@ -1,0 +1,49 @@
+import React from 'react';
+import PropTypes from 'prop-types';
+
+import {Redirect, Route, Switch} from 'dva/router';
+import dynamic from 'dva/dynamic';
+
+import Layout from './Layout';
+
+import service from 'service';
+
+const mainRoute = (props) => {
+  //解构参数
+  const {match} = props;
+
+  //动态加载路由
+  const carRoute = dynamic({
+    app,
+    component: () => import ('./car')
+  });
+  const myUsedRecordsRoute = dynamic({
+    app,
+    component: () => import('./usedrecord/MyRecordsView')
+  });
+  const allUsedRecordsRoute = dynamic({
+    app,
+    component: () => import('./usedrecord/AllRecordsView')
+  });
+
+  const rootPath = match.path;
+  return (
+    <Layout {...props}>
+      <Switch>
+        <Redirect exact from={rootPath} to={rootPath + '/usedrecord/my'} push={true}/>
+        <Route path={rootPath+'/usedrecord/my'} component={myUsedRecordsRoute} />
+        {/*{service.authz('vehicle.admin') &&}*/
+        <Route path={rootPath+'/usedrecord/all'} component={allUsedRecordsRoute} />
+        }
+        {service.authz('vehicle.admin') &&
+        <Route path={rootPath + '/car'} component={carRoute}/>}
+      </Switch>
+    </Layout>
+  )
+}
+
+mainRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default mainRoute;

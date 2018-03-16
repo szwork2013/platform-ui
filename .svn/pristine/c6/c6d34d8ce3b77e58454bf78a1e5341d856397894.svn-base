@@ -1,0 +1,92 @@
+import React from 'react'
+import PropTypes from 'prop-types'
+
+import { Redirect, Route, Switch } from 'dva/router';
+import dynamic from 'dva/dynamic';
+import Layout from './Layout';
+
+
+//模块路由
+const mainRoute = (props) => {
+  const {
+    match,
+  } = props;
+
+  //动态加载路由
+  const companyRoute = dynamic({
+    app,
+    component: () => import('./itconsumable/company')
+  });
+  const allDepartmentRoute = dynamic({
+    app,
+    component: () => import('./itconsumable/alldepartment')
+  });
+  const departmentRoute = dynamic({
+    app,
+    component: () => import('./itconsumable/department')
+  });
+  const unitsRoute = dynamic({
+    app,
+    component: () => import('./itconsumable/units')
+  });
+  const purchaseRoute = dynamic({
+    app,
+    component: () => import('./itconsumable/purchase')
+  });
+  const supplierRoute = dynamic({
+    app,
+    component: () => import('./supplier')
+  });
+  const materialRoute = dynamic({
+    app,
+    component: () => import('./material')
+  });
+  //2018.1.24 yjx
+  const officecompanyRoute = dynamic({
+    app,
+    component: () => import('./itoffice/company')
+  });
+  const officeallDepartmentRoute = dynamic({
+    app,
+    component: () => import('./itoffice/alldepartment')
+  });
+  const officedepartmentRoute = dynamic({
+    app,
+    component: () => import('./itoffice/department')
+  });
+  const materialOfficeCataloguelRoute = dynamic({
+    app,
+    component: () => import('./material/OfficeCatalogueView')
+  });
+  const materialOfficeEquipmentImportRoute = dynamic({
+    app,
+    component: () => import('./material/EquipmentImportView')
+  });
+  const rootPath = match.path;
+  return (
+    <Layout {...props}>
+      <Switch>
+        <Redirect exact from={rootPath} to={rootPath + '/consumable/company'} push={true} />
+        <Route path={rootPath + '/consumable/company'} component={companyRoute} />
+        <Route path={rootPath + '/consumable/alldepartment'} component={allDepartmentRoute} />
+        <Route path={rootPath + '/consumable/department'} component={departmentRoute} />
+        <Route path={rootPath + '/consumable/units'} component={unitsRoute} />
+        <Route path={rootPath + '/consumable/materialsearch'} component={materialRoute} />
+        <Route path={rootPath + '/consumable/materialsetting/materialimport'} component={materialRoute} />
+        <Route path={rootPath + '/purchase/itmaterial'} component={purchaseRoute} />
+        <Route path={rootPath + '/supplier'} component={supplierRoute} />
+        <Route path={rootPath + '/officeequipment/company'} component={officecompanyRoute} />
+        <Route path={rootPath + '/officeequipment/alldepartment'} component={officeallDepartmentRoute} />
+        <Route path={rootPath + '/officeequipment/department'} component={officedepartmentRoute} />
+        <Route path={rootPath + '/officeequipment/materialmanagement/catalogue'} component={materialOfficeCataloguelRoute} />
+        <Route path={rootPath + '/officeequipment/materialmanagement/equipmentimport'} component={materialOfficeEquipmentImportRoute} />
+      </Switch>
+    </Layout>
+  )
+}
+
+mainRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default mainRoute;

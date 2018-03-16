@@ -1,0 +1,89 @@
+import React from 'react';
+import PropTypes from 'prop-types';
+
+import {Redirect, Route, Switch} from 'dva/router';
+import dynamic from 'dva/dynamic';
+
+import Layout from './Layout';
+//注册模块模型
+import {modelRegister} from 'utils';
+import taskModel from './task/model';
+import taskParamsModel from './task/paramModel';
+import problemparamsModel from './problem/paramModel';
+import other_task_reportModel from './task/Form/History/model';
+import taskreportModel from './report/model';
+import taskProblem from './problem/model';
+modelRegister(taskModel);
+modelRegister(taskParamsModel);
+modelRegister(problemparamsModel);
+modelRegister(other_task_reportModel);
+modelRegister(taskreportModel);
+modelRegister(taskProblem);
+const mainRoute=(props) => {
+  //解构参数
+  const {
+    match
+  } = props;
+  //动态加载路由
+  const taskAssignRoute = dynamic({
+    app,
+    component: () => import('./task/AssignView')
+  });
+  const taskYearListRoute = dynamic({
+    app,
+    component: () => import('./task/YearListView')
+  });
+
+  const taskWeekListRoute = dynamic({
+    app,
+    component: () => import('./task/WeekListView')
+  });
+
+  const taskreportTodoRoute = dynamic({
+    app,
+    component: () => import('./report/TodoView')
+  });
+
+  const taskreportDoneRoute = dynamic({
+    app,
+    component: () => import('./report/DoneView')
+  });
+
+  const problemInHandReportRoute = dynamic({
+    app,
+    component: () => import('./problem/Report/InHandView')
+  });
+
+  const problemHandledReportRoute = dynamic({
+    app,
+    component: () => import('./problem/Report/HandledView')
+  });
+
+  const problemListRoute = dynamic({
+    app,
+    component: () => import('./problem/List')
+  });
+
+  const rootPath = match.path;
+  return (
+    <Layout {...props}>
+      <Switch>
+        <Redirect exact from={rootPath}  to={rootPath+'/list/year'} push={true}/>
+        <Route path={rootPath+'/assign'} component={taskAssignRoute} />
+        <Route path={rootPath+'/list/year'} component={taskYearListRoute} />
+        <Route path={rootPath+'/list/week'} component={taskWeekListRoute} />
+        <Route path={rootPath+'/report/todo'} component={taskreportTodoRoute} />
+        <Route path={rootPath+'/report/done'} component={taskreportDoneRoute} />
+        <Route path={rootPath+'/problem/report/inhand'} component={problemInHandReportRoute}/>
+        <Route path={rootPath+'/problem/report/handled'} component={problemHandledReportRoute}/>
+        <Route path={rootPath+'/problem/list'} component={problemListRoute}/>
+      </Switch>
+    </Layout>
+  )
+}
+
+mainRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default mainRoute;

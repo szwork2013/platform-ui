@@ -1,0 +1,64 @@
+import React from 'react';
+import {connect} from 'dva';
+import {ModuleLayout} from 'components';
+
+const menuItems = [
+  {
+    path: 'category',
+    icon: 'fork',
+    title: '支出科目',
+    expanded: true,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'operating',
+        icon: 'api',
+        title: '生产费用'
+      },
+      {
+        path: 'infrastructure',
+        icon: 'layout',
+        title: '基建费用'
+      },
+    ]
+  },
+  {
+    path: 'fundsource',
+    icon: 'red-envelope',
+    title: '场站/项目',
+    expanded: true,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'station',
+        icon: 'api',
+        title: '场站'
+      },
+      {
+        path: 'project',
+        icon: 'layout',
+        title: '项目'
+      },
+    ]
+  },
+  {
+    path: 'paymentprop',
+    icon: 'red-envelope',
+    title: '付款性质',
+
+  },
+  {
+    path: 'redheaddoc',
+    icon: 'file-add',
+    title: '红头文件',
+
+  },
+];
+
+const Layout = (props) => {
+  return (
+    <ModuleLayout trigger siderTitle='配置' siderIcon='tool' menu={menuItems} {...props} />
+  )
+}
+
+export default Layout;

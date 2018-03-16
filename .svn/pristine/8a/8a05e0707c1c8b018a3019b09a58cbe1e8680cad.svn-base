@@ -1,0 +1,73 @@
+import {message,DatePicker} from 'antd';
+
+import { Form } from 'components'
+
+import service from 'service';
+
+const Layout = (props) => {
+  //按钮条配置
+  const actionBar = {
+    save: true, //显示保存按钮
+    saveAndClose: true, //显示保存并关闭按钮
+    edit: true, //显示编辑按钮
+    close: true, //显示关闭按钮
+  };
+
+  const {record, state} = props.model;
+
+    //构造最后填写日选项
+  const constructDeadLineSelectProps = () => {
+    let deadLineOptions = [];
+    for(let i=31;i>=1;i--) deadLineOptions.push({name: i+'号', id: i});
+    return deadLineOptions;
+  }
+
+  const deadlineProps=constructDeadLineSelectProps();
+
+  //最后填写日显示构造函数
+  const deadlineRender = (text, record) => {
+    if(text!=null&&text!=undefined)
+    return "当月"+text+"号";
+  }
+
+  //表单配置
+  const embeddedForm=[
+    { row: 1, type:'Input', title:'名称', key:'name' },
+    { row: 2, type:'Input', title:'编码', key:'no',required: false },
+    { row: 3, type:'InputNumber', title:'序号', key:'sortNo',required: false},
+    { row: 4, type:'TreeSelect', title:'父类别', key:'parent', required: false,
+      labelKey:'name', modelName:'indicator_category', searchParam:{ //搜索条件
+      filter: {
+        where:'o.parent is Null or o.dept is Null'
+      },
+      size: 1000, //指定每页记录数
+      sort: 'o.sortNo,asc' //缺省排序规则
+    }
+    },
+    { row: 5, type:'TreeSelect', title:'责任部门', key:'dept', parentKey: 'parentOrg', required: false,
+    labelKey:'orgName', modelName:'orgs', searchParam:{ //搜索条件
+      filter: {
+        where:'o.type=2',
+      },
+      size: 1000, //指定每页记录数
+      sort: 'o.sortNo,asc' //缺省排序规则
+    }
+  },
+  { row: 7, type:'Select', title:'值类型',key:'valueType',options:[{id:'1',name:'数字'},{id:'2',name:'文本'}], required: false},
+    { row: 8, type:'Input', title:'填报格式',key:'initFormat',required: false,},
+  { row: 9, type:'Select', title:'截止日',key:'deadline',required: false,options:deadlineProps},
+  { row: 10, type:'InputNumber', title:'可延迟天数',key:'delay',required: false},
+  { row: 11, type:'DatePicker', title:'失效日期',key:'endDate',required: false},
+
+  ];
+
+	//显示UI
+	return (
+    <Form actionBar={actionBar} embeddedForm={embeddedForm} {...props} />
+	);
+}
+
+import { connect } from 'dva';
+export default connect(({apptabs, loading}) =>
+  ({apptabs, loading:loading.models.expenditure_categories})
+)(Layout);

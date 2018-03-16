@@ -1,0 +1,80 @@
+import {Form as FormLayout,FormItem } from 'components';
+
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+
+import service from 'service';
+
+//权限定义表单
+let trasportation=[
+   {'id':'飞机','name':'飞机'},
+   {'id':'客运汽车','name':'客运汽车'},
+   {'id':'火车','name':'火车'},
+   {'id':'高铁动车','name':'高铁动车'},
+   {'id':'轮船','name':'轮船'},
+   {'id':'其他','name':'其他'}
+];
+
+const ItemForm = (props) => {
+	//解构参数
+	//解构参数
+	let {
+    model,
+    canEdit = true, //FormContainer注入：是否可编辑
+    dispatch,
+    getFieldDecorator,
+    setFieldsValue,
+	} = props;
+
+  const { record, state} = model;
+
+  const userName = service.userInfo.user.name;
+  record._person=userName;
+  //构造FormItem的公共参数
+  const itemProps = { canEdit, required:true, getFieldDecorator,setFieldsValue,controlProps:{allowClear:false}};
+  const oneItemWidth = ['95%','30%','65%'];
+
+	//显示UI
+	return (
+    <Form layout='inline' style={{height:'100%'}}>
+      <Row>
+        <FormItem type='Input' {...itemProps}  width={oneItemWidth} canEdit={false}
+          title='出差人员'  itemKey='_person' initialValue={userName}
+        />
+      </Row>
+      <Row>
+        <FormItem type='DatePicker' {...itemProps} width={oneItemWidth}
+          title='开始时间'
+          placeholder='' itemKey='_travel_startTime'
+        />
+      </Row>
+      <Row>
+        <FormItem type='DatePicker' {...itemProps} format='YYYY-MM-DD' width={oneItemWidth}
+          title='结束时间'
+          placeholder='' itemKey='_travel_endTime'
+        />
+      </Row>
+      <Row>
+        <FormItem type='Input' {...itemProps} width={oneItemWidth}
+          title='出差地点'
+          placeholder='' itemKey='_place'
+        />
+      </Row>
+      <Row>
+        <FormItem type='Input' {...itemProps} width={oneItemWidth}
+          title='出差事由'
+          placeholder=''  itemKey='_reason'
+        />
+      </Row>
+      <Row>
+        <FormItem type='Select' {...itemProps} width={oneItemWidth}
+          title='交通方式' options={trasportation}
+          placeholder='' itemKey='_trasportation' initialValue={record._trasportation}
+        />
+      </Row>
+    </Form>
+	);
+}
+
+export default ItemForm;

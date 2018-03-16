@@ -1,0 +1,81 @@
+import service from 'service';
+
+import { config} from 'utils';
+const { api } = config; //取得RESTful api配置信息
+
+
+
+//构造年度选择信息
+export const getYearList = () => {
+  const { rootPath } = api; //RESTful请求的根路径
+  const url = rootPath+'/kpi_monthlykpi/search/getYearList';
+  return service.queryRecord(url);
+}
+
+//构造部门选择信息
+export const getDeptList = () => {
+  const { rootPath } = api; //RESTful请求的根路径
+  const url = rootPath+'/kpi_monthlykpi/search/getDeptList';
+  return service.queryRecord(url);
+}
+
+//获取统计信息
+export const getYearReport = (conditionData) => {
+  const { rootPath } = api; //RESTful请求的根路径
+  if(conditionData.month==-1){
+    conditionData.month=undefined;
+  }
+  if(conditionData.deptId==-1){
+    conditionData.deptId=undefined;
+  }
+  const url = rootPath+'/kpi_monthlykpi/search/getYearReport';
+  return service.queryRecord(url,conditionData);
+}
+
+//获取统计信息
+export const getYearReportList = (conditionData) => {
+  const { rootPath } = api; //RESTful请求的根路径
+  if(conditionData.month==-1){
+    conditionData.month=undefined;
+  }
+  if(conditionData.deptId==-1){
+    conditionData.deptId=undefined;
+  }
+  const url = rootPath+'/kpi_monthlykpi/search/getYearReportList';
+  return service.queryRecord(url,conditionData);
+}
+
+//构造查询参数
+export const constructSearchParam = (conditionData) => {
+  if (!conditionData) return;
+
+  let where = '';
+
+  for(let attrName in conditionData){
+    if(attrName=='where') continue;
+    let attrValue = conditionData[attrName];
+    let attrWhere = '';
+    if(attrName=='year'&&attrValue!=-1){ //支出性质
+      attrWhere = 'o.year='+attrValue;
+    }
+    else if(attrName=='month'&&attrValue!=-1) {
+      attrWhere = 'o.month='+attrValue;
+    } 
+    else if(attrName=='deptId'&&attrValue!=-1) {
+      attrWhere = 'o.dept.id='+attrValue;
+    }
+    else if(attrName=='reportType'&&attrValue!=-1) {
+      attrWhere = 'o.category.type='+attrValue;
+    }
+
+    if (attrWhere && attrWhere!='')
+      where += where=='' ? attrWhere : ' and '+attrWhere;
+  }
+
+  return {
+    filter: { //过滤规则
+      where,
+    },
+    size: 20,
+  };
+}

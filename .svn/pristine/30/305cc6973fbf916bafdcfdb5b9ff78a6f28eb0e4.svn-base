@@ -1,0 +1,31 @@
+import { Form } from 'components'
+
+import modelDefinition from '../model';
+
+const FormComponent = (props) => {
+  //取得模型名称
+  const modelName = modelDefinition.namespace;
+
+  const actionBar = {
+    //saveAndClose: true, //显示保存并关闭按钮
+    save: true, //显示保存按钮
+    close: true, //显示关闭按钮
+  };
+
+  //表单配置
+  const embeddedForm=[
+   { row: 1, type:'Input', title:'序号', key:'sortNo' },
+   {row: 2, type:'Input', title:'分类名称', key:'name'},
+  ];
+
+   //显示UI
+  return (
+    <Form actionBar={actionBar} embeddedForm={embeddedForm} {...props}>
+    </Form>
+  );
+}
+
+import { connect } from 'dva';
+export default connect(({apptabs, loading}) =>
+  ({apptabs, loading:loading.models.leave_categories})
+)(FormComponent);

@@ -1,0 +1,27 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+import { config} from 'utils';
+const { api } = config; //取得RESTful api配置信息
+import service from 'service';
+//模型定义
+const namespace = {
+  name: 'budget_report',
+  title:'预算',
+  clazz: 'Report',
+};
+const modelParam = {
+  form: Form, //使用的表单
+    effects: {
+    // 获取报表配置信息
+    *convert({type,payload}, {call, put,select}) {
+      debugger;
+      const { rootPath } = api; //RESTful请求的根路径
+      let url=rootPath+'/dataconverter/convert';
+      alert(url);
+      service.queryRecord(url, {});
+    },
+
+  },// end of effects
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

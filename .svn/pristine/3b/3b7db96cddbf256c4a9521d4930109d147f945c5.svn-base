@@ -1,0 +1,47 @@
+import {ModuleLayout} from 'components';
+import service from 'service';
+import {connect} from 'dva';
+const Layout = (props) => {
+  let {indicatorTodoCount} = props;
+  if(!indicatorTodoCount){
+    if(service.authz('report.fillin')){
+      props.dispatch({type: 'indicator_category/fetchIndicatorTodo'});
+    }
+  }
+  const menuItems = [
+    {
+      path: 'report',
+      icon: 'flag',
+      title: '报表查询',
+      // permission: 'report.inquiry'
+    }, {
+      path: 'monthly',
+      icon: 'edit',
+      title: '报表填报',
+      permission: 'report.fillin',
+      badgeCount: indicatorTodoCount
+    }, {
+      path: 'yearly',
+      icon: 'edit',
+      title: '年度指标',
+      permission: 'report.fillin'
+    }, {
+      path: 'category',
+      icon: 'fork',
+      title: '报表配置',
+      permission: 'report.admin'
+    }
+  ];
+  return (<ModuleLayout
+    trigger
+    siderTitle='报表'
+    siderIcon='flag'
+    menu={menuItems}
+    {...props}/>)
+}
+function mapStateToProps(state) {
+  const indicatorTodoCount = state.indicator_category.todoCount;
+  return {indicatorTodoCount};
+}
+
+export default connect(mapStateToProps)(Layout);

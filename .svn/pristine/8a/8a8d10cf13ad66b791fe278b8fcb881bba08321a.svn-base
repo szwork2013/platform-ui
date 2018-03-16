@@ -1,0 +1,97 @@
+
+import styled from 'styled-components';
+import { Layout, Spin, Form } from 'antd';
+const { Header, Footer, Content } = Layout;
+
+const StyledSpin = styled(Spin)`
+    height:100%;
+`;
+
+const StyledLayout = styled(Layout)`
+	background: #ffffff !important;
+	height:100% !important;
+`;
+
+const StyledHeader = styled(Header)`
+    width: 1000px !important;
+    margin: 0 auto !important;
+    padding-bottom: 40px !important;
+    border-bottom: 1px solid #cececf !important;
+    text-align: center !important;
+    padding-top: 100px !important;
+    background: #ffffff !important;
+    height:209px !important;
+`;
+
+const StyledContent = styled(Content)`
+    position: relative;
+    width: 1000px;
+    margin: 0 auto;
+    margin-top: 50px;
+    clear: both;
+    height:270px;
+`;
+
+const StyledContentLeftDiv = styled.div`
+	float:left;
+`;
+
+const StyledContentRightDiv = styled.div`
+    width: 370px;
+    float:right;
+`;
+
+const StyledTitleH1 = styled.h1`
+    font: 18px 'microsoft yahei';
+    color: #000;
+    text-align: center;
+    margin-top: 0px;
+`;
+
+const StyledLogoDiv = styled.div`
+    height: 40px;
+    margin-top: 0px;
+`;
+
+const StyledFormDiv = styled.div`
+    width: 370px;
+    height: 180px;
+    paddingTop: 10px;
+    input, i {
+        font: 14px 'microsoft yahei';
+    }
+    button {
+        font: 14px 'microsoft yahei';
+        width:100%;
+    }
+    img {
+        position: absolute;
+        right: 0;        
+    }
+`;
+
+const StyledFooter = styled(Footer)`
+    height: 48px;
+    background-color: #0d78de;
+    color: #fff !important;
+    text-align: center;
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+    min-width: 1000px;
+    padding: 0px !important;
+    font: 14px/48px simsun !important;
+`;
+
+module.exports = {
+    StyledSpin,
+	StyledLayout,
+	StyledHeader,
+	StyledContent,
+	StyledContentLeftDiv,
+	StyledContentRightDiv,
+	StyledTitleH1,
+	StyledLogoDiv,
+	StyledFormDiv,
+	StyledFooter
+}

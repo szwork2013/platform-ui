@@ -1,0 +1,465 @@
+import config from './config';
+import service from 'service';
+
+const {API} = config; //取得RESTful api配置信息
+
+const serviceUrl = API + '/workflow_service/';
+
+//服务接口
+const wfservice = {
+  //验证操作权限
+  authz: (record, actionNoArray) => {
+    return authz(record, actionNoArray);
+  },
+
+  //创建流程实例
+  startProcess: (param) => {
+    return startProcess(param);
+  },
+
+  //设置待办列表到记录
+  setTodoListAndInstanceId: (record, param) => {
+    setTodoListAndInstanceId(record, param);
+  },
+
+  //从记录中读取待办列表
+  getTodoList : (record) => {
+    if(!record)
+      return undefined;
+    return record._xpnTodoList;
+  },
+
+  //从记录中读取流程实例id
+  getInstanceId: (record) => {
+    if(!record)
+      return undefined;
+    return record.xpnProcessInstanceId;
+  },
+
+  //从记录中读取流程编号
+  getProcessNo: (record) => {
+    if(!record)
+      return undefined;
+    return record._processNo;
+  },
+
+  //设置流程编号到记录中
+  setProcessNo: (record, processNo) => {
+    if(!record)
+      return ;
+    record._processNo = processNo;
+  },
+
+  //获取执行者的待办列表
+  requestSelfTodoList: (refVarName,record,todoId='') => {
+    return requestSelfTodoList(refVarName,record,todoId);
+  },
+
+  //获取流程特殊人员列表
+  requestSpecificUser: ({actionId,instanceId,todoId}) => {
+    return requestSpecificUser({actionId,instanceId,todoId});
+  },
+
+  //执行操作
+  executeAction : ({todoId,actionId,sendees,comment,record,commentActionId}) => {
+    return executeAction(todoId,actionId,sendees,comment,record,commentActionId);
+  },
+
+  //查询流程历史
+  queryProcessHistories: (instanceId) => {
+    return queryProcessHistories(instanceId);
+  },
+  //查询操作历史
+  queryTodoByInstance: (instanceId) => {
+    return queryTodoByInstance(instanceId);
+  },
+
+  //获取操作条
+  getActionButtons:(record)=>{
+    return getActionButtons(record);
+  },
+
+  //获取待办id
+  getTodoId:(record)=>{
+    return getTodoId(record);
+  },
+
+  //获取原始作者id
+  getStarterId:(record)=>{
+    return getStarterId(record);
+  },
+
+  //获取本人的发送人id
+  getSenderId:(record)=>{
+    return getSenderId(record);
+  },
+
+  //获取意见栏列表
+  getCommentColumns:(record)=>{
+    return getCommentColumns(record);
+  },
+
+  //获取意见列表
+  getComments:(record,no)=>{
+    return getComments(record,no);
+  },
+
+  //获取自己意见
+  getSelfComments:(record,no,todoId)=>{
+    return getSelfComments(record,no,todoId);
+  },
+
+  //完成待办
+  completeTodo: (param) => {
+    return completeTodo(param);
+  },
+
+  //从url里面获取待办id
+  getTodoIdFromHref: (href) => {
+    var reg = new RegExp("(^|&)todoId=([^&]*)(&|$)");
+    var r = href.substr(1).match(reg);
+    if(r!=null)return  unescape(r[2]); return undefined;
+  },
+
+  //从url里面获取待办id
+  getCanTackBackTodoId: (record) => {
+    return getCanTackBackTodoId(record);
+  },
+
+  //收回待办
+  tackBack: (param) => {
+    return tackBack(param);
+  },
+
+  //已办转待办
+  doneToTodo: (param) => {
+    return doneToTodo(param);
+  }
+}
+
+export default wfservice;
+
+//服务实现
+
+//验证操作权限
+function authz(record, actionNoArray) {
+  if (service.isAdmin()) return true;
+  
+  if (!record || !record._xpnTodoList)
+    return false;
+
+  //无可执行操作
+  if (record._xpnTodoList.length == 0)
+    return false;
+
+  //不限定操作
+  if (!actionNoArray || !Array.isArray(actionNoArray))
+    return true;
+
+  let actions=[];
+  let todo=record._xpnTodoList[0];
+  if(todo){
+    if(todo.actions&&todo.actions.length>0)
+      actions=todo.actions;
+  }
+
+  let resultAction = false;
+  actionNoArray.forEach((actionNo) => {
+    const action = actions.find(a => a.no === actionNo);
+    if (action) {
+      resultAction = true;
+      return;
+    }
+  })
+
+  return resultAction;
+}
+
+//启动流程实例
+function startProcess({refVarName,processNo,record}) {
+  let entityLink = service.parseRecordUrl(record);
+  let starterId=service.userInfo.user.id;
+  const url = serviceUrl + 'instance?no=' + processNo + '&starterId=' +
+    starterId+ '&entityLink=' + entityLink + '&refVarName=' + refVarName+'Ref';
+  return service.httprequest(url, {
+    method: 'post',
+    data: {}
+  });
+}
+
+//设置待办列表到记录
+function setTodoListAndInstanceId(record, param) {
+  if (!record || !param)
+    return;
+
+  //情形1：参数是todo列表：获取待办列表时使用
+  if (Array.isArray(param)) {
+    record._xpnTodoList = param;
+    if(param.length===0)
+      return;
+    let todo=param[0].todo;
+    if(todo)
+    if(todo.instance)
+    record.xpnProcessInstanceId = todo.instance.id;
+    return;
+  }
+
+  //情形2：参数是一条todo：启动流程实例时使用
+  const todo = param;
+
+  //设置流程信息到临时字段
+  record._xpnTodoList = []
+  record._xpnTodoList.push(todo)
+
+  //设置实例id
+  if(todo.todo)
+  if(todo.todo.instance)
+    record.xpnProcessInstanceId = todo.todo.instance.id;
+}
+
+//获取执行者的待办列表
+function requestSelfTodoList(refVarName,record,todoId) {
+  let entityLink = service.getHrefOfLinkAttr(record);
+  let instanceId=record.xpnProcessInstanceId;
+  let executorId=service.userInfo.user.id;
+  const url = serviceUrl + 'instance/' + instanceId + '/todos/self?executorId=' + executorId +
+    '&todoId=' + todoId + '&entityLink=' + entityLink + '&refVarName=' + refVarName+'Ref';
+  return service.httprequest(url);
+}
+
+
+//获取流程特殊人员
+function requestSpecificUser({actionId,instanceId,todoId}) {
+  const url = serviceUrl + 'instance/' + instanceId + '/todos/'+todoId+'/specificuser?actionId=' + actionId
+  return service.httprequest(url);
+}
+
+//执行操作
+function executeAction(todoId,actionId,sendees=[],comment='',record,commentActionId='') {
+  //获取流程定义扩展字段
+  let extendJson = getExtendJson(record);
+  //待办类型，待办紧急程度
+  let todoCategory='';
+  let todoEmergency='';
+  let todoTitle='';
+  if(extendJson){
+    todoCategory=constructTitle(extendJson,record,'category');
+    todoEmergency=extendJson.emergency;
+    todoTitle=constructTitle(extendJson,record,'title');
+  }
+  let url = serviceUrl+'instance/todos/'+todoId+'/actions/'+actionId+'/execute?'+
+    'comment='+encodeURIComponent(comment)+'&todoCategory='+encodeURIComponent(todoCategory)+
+    '&todoEmergency='+todoEmergency+'&todoTitle='+encodeURIComponent(todoTitle)
+    +'&commentActionId='+commentActionId;
+  return service.httprequest(url,{ method: 'post',
+    data:{sendees}});
+}
+
+//获取流程定义扩展对象
+function getExtendJson(record){
+  if (!record._xpnTodoList || !Array.isArray(record._xpnTodoList)||record._xpnTodoList.length<=0) return undefined;
+  let todo=record._xpnTodoList[0];
+  let extendJson=undefined;
+  if(todo){
+    if(todo.todo)
+    if(todo.todo.instance)
+    if(todo.todo.instance.process)
+      extendJson=todo.todo.instance.process.extendJson;
+  }
+  if(extendJson)
+    return eval('(' + extendJson + ')');
+  return undefined;
+}
+
+//获取流程定义扩展对象
+function constructTitle(extendJson,record,ruleKey){
+  //ruleKey对应的值是字符串 或者 是一个数组，数组里面每个对象都有一个key对应record，和一个替换模板 key的结构有可能是：org.name
+
+  let rule=extendJson[ruleKey]
+  if (!rule) return '';
+  //不是数组直接返回
+  if (!Array.isArray(rule)) return rule;
+  //空数组，返回空
+  if (Array.isArray(rule)&&rule.length<=0) return '';
+
+  let ruleValue='';
+  rule.forEach((item)=>{
+    //获取单个对象的key
+    let key=item.key;
+    if(key){
+      let keyArray=key.split('.');
+      let subRuleVaule=undefined;
+      keyArray.forEach((subKey)=>{
+        //初始第一个子key 在record里面获取
+        if(!subRuleVaule){
+          if(record[subKey]){
+            subRuleVaule=record[subKey];
+          } else  subRuleVaule='';
+        }else{//后面连续的子key 就在原来取到值得value里面取值
+          if(subRuleVaule[subKey]){
+            subRuleVaule=subRuleVaule[subKey];
+          }else subRuleVaule='';
+        }
+      })
+
+      //如果有替换模板，就把计算出来的只用替换模板替换
+      if(subRuleVaule&&item.replaceTemplete){
+        subRuleVaule=item.replaceTemplete.replace(/k_e_y/g, subRuleVaule)
+      }
+
+      if(subRuleVaule){
+        ruleValue=ruleValue+subRuleVaule;
+      }
+    }
+  });
+  if(!ruleValue||ruleValue==null)
+    return '';
+  return ruleValue;
+}
+
+//查询流程历史
+function queryProcessHistories(instanceId) {
+  const url = serviceUrl + 'instance/' + instanceId + '/histories';
+  return service.httprequest(url, {method: 'get', data: {}});
+}
+//根据流程ID查询当前TODO
+function queryTodoByInstance(instanceId) {
+  const url = serviceUrl + 'instance/' + instanceId + '/todos?isCompleted=false';
+  return service.httprequest(url, {method: 'get', data: {}});
+}
+
+//获取操作条
+function getActionButtons(record){
+  if (!record._xpnTodoList || !Array.isArray(record._xpnTodoList)||record._xpnTodoList.length<=0) return [];
+  let actions=[];
+  let todo=record._xpnTodoList[0];
+  if(todo){
+    if(todo.actions&&todo.actions.length>0)
+      actions=todo.actions;
+  }
+  let actionButtons=actions.filter(action=>action.uiType==='ActionBar');
+  if (!actionButtons || actionButtons.length==0) return [];
+  return actionButtons;
+}
+
+//获取待办id
+function getTodoId(record){
+  if (!record._xpnTodoList || !Array.isArray(record._xpnTodoList)||record._xpnTodoList.length<=0) return undefined;
+  let todo=record._xpnTodoList[0];
+  let todoId='';
+  if(todo){
+    if(todo.todo)
+      todoId=todo.todo.id;
+  }
+  return todoId;
+}
+
+//获取原始作者id
+function getStarterId(record){
+  if (!record._xpnTodoList || !Array.isArray(record._xpnTodoList)||record._xpnTodoList.length<=0) return undefined;
+  let todo=record._xpnTodoList[0];
+  let starterId='';
+  if(todo){
+     starterId=todo.starterId;
+  }
+  return starterId;
+}
+
+//获取发送人id
+function getSenderId(record){
+  if (!record._xpnTodoList || !Array.isArray(record._xpnTodoList)||record._xpnTodoList.length<=0) return undefined;
+  let todo=record._xpnTodoList[0];
+  let senderId='';
+  if(todo){
+    senderId=todo.senderId;
+  }
+  return senderId;
+}
+
+//获取意见栏列表
+function getCommentColumns(record){
+  //检查工作流信息中是否有意见栏列表
+  if (!record._xpnTodoList || !Array.isArray(record._xpnTodoList)||record._xpnTodoList.length<=0) return [];
+  let commentColumns=[];
+  let todo=record._xpnTodoList[0];
+  if(todo){
+    if(todo.commentColumns&&todo.commentColumns.length>0)
+      commentColumns=todo.commentColumns;
+  }
+
+  if (commentColumns.length==0) return [];
+
+  //设置里面栏里面的意见
+  commentColumns.forEach((commentColumn)=>{
+    commentColumn.comments=getComments(record,commentColumn.no);
+  })
+  return  commentColumns;
+}
+
+//获取意见栏列表
+function getComments(record,no){
+  //检查工作流信息中是否有意见列表
+  if (!record._xpnTodoList || !Array.isArray(record._xpnTodoList)||record._xpnTodoList.length<=0) return null;
+  let comments=[];
+  let todo=record._xpnTodoList[0];
+  if(todo){
+    if(todo.comments&&todo.comments.length>0)
+      comments=todo.comments;
+  }
+
+  //根据itemKey过滤意见栏
+  if(comments&&Array.isArray(comments)&&comments.length>0)
+    comments=comments.filter(c=>c.column.no===no);
+  return comments
+}
+
+//获取自己的意见
+function getSelfComments(record,no,todoId){
+  let comments=getComments(record,no);
+  let userId=service.userInfo.user.id;
+  let comment=comments.find(c=>c.userId==userId&&c.todo&&c.todo.id==todoId);
+  if(!comment)
+    return '';
+  return comment.content;
+}
+
+//待办转已办
+function completeTodo(param){
+  let {todoId,action}=param;
+  let executorId=service.userInfo.user.id;
+  let url = serviceUrl+'instance/todos/'+todoId+'/complete?executorId='+executorId;
+  if(action){
+    url += '&actionId='+action.id;
+  }
+  return service.httprequest(url,{ method: 'post',
+    data:{}});
+}
+
+//获取待办id
+function getCanTackBackTodoId(record){
+  if (!record._xpnTodoList || !Array.isArray(record._xpnTodoList)||record._xpnTodoList.length<=0) return undefined;
+  let todo=record._xpnTodoList[0];
+  if(todo.canTackBack&&todo.canTackBack!=null&&todo.tackBackTodoId>0)
+    return todo.tackBackTodoId;
+  return undefined;
+}
+
+//收回待办
+function tackBack(param){
+  let {todoId}=param;
+  const url = serviceUrl+'takeBackAllTodo?todoId='+todoId;
+  return service.httprequest(url,{ method: 'post',
+    data:{}});
+}
+
+//已办转待办
+function doneToTodo(param){
+  let {todoId,action}=param;
+  let executorId=service.userInfo.user.id;
+  let url = serviceUrl+'instance/todos/'+todoId+'/incomplete?executorId='+executorId;
+  if(action){
+    url += '&actionId='+action.id;
+  }
+  return service.httprequest(url,{ method: 'post',
+    data:{}});
+}

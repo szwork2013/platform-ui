@@ -1,0 +1,46 @@
+import styled from 'styled-components';
+import { Pagination, Button } from 'antd';
+
+//皮肤定义
+const theme = {
+	height: 35,
+	fontSize: 14,
+	padding: 3,
+	totalHeight: () => theme.height,
+}
+
+const StyledPaginationBarDiv = styled.div`
+	width: 100%;
+	height: ${theme.height}px;
+`;
+
+const StyledPagination = styled(Pagination)`
+	float: right;
+	height: ${theme.height}px;
+	font-size: ${theme.fontSize}px;
+	padding: ${theme.padding}px;
+	margin-right: 20px;
+	input {
+		height:25px !important;
+	}
+`;
+
+const StyledReloadButton = styled(Button)`
+	font-size: ${theme.fontSize}px;
+	height: ${theme.height-theme.padding*3}px;
+	margin-top: ${theme.padding}px;
+	margin-bottom: ${theme.padding}px;
+	margin-left:10px;
+	cursor: pointer;
+  transition: color .3s;
+  :hover {
+  	color: #108ee9 !important;
+	}
+`;
+
+export {
+	StyledPaginationBarDiv,
+  StyledPagination,
+  StyledReloadButton,
+  theme,
+}

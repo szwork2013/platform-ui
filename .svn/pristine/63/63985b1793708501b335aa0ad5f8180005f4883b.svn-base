@@ -1,0 +1,93 @@
+import service from 'service';
+
+export default {
+  namespace: 'problemParams',
+  state: {
+    conditionData:{
+      state:['1', '2']
+    }, //条件数据
+  },
+
+  reducers: {
+    save(state, {payload}) {
+      return {...state, ...payload}
+    }
+  },
+
+  subscriptions: {
+    setup ({ dispatch }) {
+    },
+  },
+
+  effects: {
+    //初始化模型消息
+    *initialize({payload}, {select, call, put}) {
+      let searchParam = {
+        filter: undefined,
+        search: 'getTaskList',
+        size: 10, //指定每页记录数
+        //排序规则：sortNo升序
+        alias: 'f',
+        sort: 'f.dept asc'
+      };
+      yield put({
+        type: 'task/query',
+        payload: {searchParam, initQuery: true}
+      })     
+    },
+
+    //修改条件数据消息
+    *changeConditionData({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      conditionData={...conditionData,...payload};
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });
+      let deptId = undefined;
+      if(payload.dept)
+        deptId = payload.dept.id;
+      let where = `o.state ${payload.state}`;
+      if(deptId)
+        where = where +` and o.createdBy.org.id =${deptId}`;
+      yield put({
+        type: 'task_problem/query',
+        payload: {searchParam:{
+            filter:{
+              where:where
+            }
+        }}
+      })
+    },
+
+
+    //修改条件数据消息
+    *mychangeConditionData({type,payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      conditionData = {
+        ...conditionData,
+        ...payload
+      };
+      yield put({type: 'save', payload: {conditionData}});
+      let where = `1=1`;
+      if(conditionData.dept){
+        if(conditionData.dept.id){
+          where = `${where} and o.createdBy.org.id =${conditionData.dept.id}`;
+        }
+      }
+      if(conditionData.state && conditionData.state.length !== 0){
+        where = `${where} and o.state in (${conditionData.state})`;
+      }
+      yield put({
+        type: 'task_problem/query',
+        payload: {searchParam:{
+            filter:{
+              where:where
+            }
+        }}
+      });
+    }
+  }
+};

@@ -1,0 +1,60 @@
+
+import {
+  View
+} from 'components';
+
+import service from 'service';
+
+const ViewComponent = ( props ) => {
+  	//解构参数
+	let {
+    model,
+    searchParam,
+    objPropName,//要设置的对象的属性名称
+	} = props;
+  let mianRecord=props.record;
+  const userLink = service.userInfo.user.selfLink;
+
+  //定义操作条属性
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: false, //显示删除按钮
+    newRow: false,
+  }
+
+  //定义列表属性
+  const listProps = {
+    columns:[ // 和antd table组件的列定义相同
+      { title: '名称', width:'125', dataIndex: 'name', key: 'name'},
+      { title: '规格',width:'250', dataIndex: 'specification', key: 'specification'},
+      { title: '单位', width:'70',dataIndex: 'measurementUnit', key: 'measurementUnit'},
+      { title: '单价',width:'90',  dataIndex: 'priceWithTax', key: 'priceWithTax'},
+    ],
+    rowSelection: {type:'checkbox', onSelect: handleOnRowSelect}, //选择功能配置
+  };
+
+  //翻页器属性
+  const paginationBarProps = {reloadButton:false};
+
+  return (
+    <View key={'material'+'ViewLayout'} {...props}
+      searchParam={searchParam}
+      heightOffset={-160}
+      modelName='material' //模型名称
+      actionBar={actionBarProps} //操作条定义
+      list={listProps} //列表定义
+      paginationBar={paginationBarProps}
+    />
+  )
+
+  //处理视图行被选中事件
+  function handleOnRowSelect(record, selected, selectedRows) {
+    mianRecord[objPropName]  = selectedRows;
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({material, loading, apptabs:{tabs}}) =>
+  ({material, loading: loading.models['material'], tabs})
+)(ViewComponent);

@@ -1,0 +1,44 @@
+import {Col} from 'antd';
+
+import {StyledHeaderDiv} from '../../../styled';
+
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+
+import service from 'service';
+import wfservice from 'wfservice';
+
+const TitleSection = ({
+      record,title
+}) => {
+
+  const authorInfo=service.getRecordAuthorInfo({record});
+
+  let formTitle=null;
+  if(record.type!=undefined){
+    formTitle=title?title:(record.type==1?'新能源云南分公司费用管理流程':'新能源云南分公司合同管理流程')
+  }
+
+  return(
+    <div>
+      <Row>
+        <StyledHeaderDiv>{formTitle}</StyledHeaderDiv>
+      </Row>
+      <Row>
+        <Col span={3} style={{color: '#0d78de'}}>
+          编号：{record.projectNo}
+        </Col>
+        <Col span={15}>
+          事项名称：{record.projectName}
+        </Col>
+        <Col span={6} style={{color: '#0d78de',textAlign:'right'}}>
+          {authorInfo}&nbsp;&nbsp;{record.createdTime}
+        </Col>
+      </Row>
+    </div>
+  )
+}
+
+export default TitleSection;

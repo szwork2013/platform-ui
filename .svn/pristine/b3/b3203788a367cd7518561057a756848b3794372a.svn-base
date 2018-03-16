@@ -1,0 +1,66 @@
+import React from 'react';
+import PropTypes from 'prop-types';
+import config from 'config';
+import service from 'service';
+import {StyledButton, StyledButtonsDiv} from './styled';
+
+const PrintButton = (props) => {
+  const {title = "打印", templateNo, entityLink, attachmentLink, fileName = "print",record,dispatch, ...customProps} = props
+
+  {/*function openPdf() {*/}
+    {/*let xpnToken = service.userInfo.token.value;*/}
+    {/*const rootUrl = config.API.replace('api', '');*/}
+    {/*const entityFullLink = encodeURIComponent(`${entityLink}?xpnToken=${xpnToken}`);*/}
+    {/*const printPageUrl = rootUrl + 'pdfjs-1.9.426-dist/web/viewer.html?file=' +*/}
+      {/*encodeURIComponent(`/template_excel/service/mailmerge?xpnToken=${xpnToken}&templateNo=${templateNo}&attachmentLink=${attachmentLink}&fileName=${fileName}&entityLink=${entityFullLink}`)*/}
+    {/*// window.open(printPageUrl, '_blank').focus();*/}
+    {/*popupCenter(printPageUrl,"打印",650,900);*/}
+  {/*}*/}
+
+  {/*function popupCenter(url, title, w, h) {*/}
+    {/*// Fixes dual-screen position Most browsers  Firefox*/}
+    {/*let dualScreenLeft = window.screenLeft !== undefined ? window.screenLeft : screen.left;*/}
+    {/*let dualScreenTop = window.screenTop !== undefined ? window.screenTop : screen.top;*/}
+
+    {/*let width = window.innerWidth ? window.innerWidth : document.documentElement.clientWidth ? document.documentElement.clientWidth : screen.width;*/}
+    {/*let height = window.innerHeight ? window.innerHeight : document.documentElement.clientHeight ? document.documentElement.clientHeight : screen.height;*/}
+
+    {/*let left = ((width / 2) - (w / 2)) + dualScreenLeft;*/}
+    {/*let top = ((height / 2) - (h / 2)) + dualScreenTop;*/}
+    {/*let newWindow = window.open(url, title, 'menubar=no,toolbar=no, status=no,scrollbars=yes, width=' + w + ', height=' + h + ', top=' + top + ', left=' + left);*/}
+
+  //   // Puts focus on the newWindow
+  //   if (window.focus) {
+  //     newWindow.focus();
+  //   }
+  // }
+
+  function openPdf() {
+    dispatch({
+      type:'print/openPdf',
+      payload:{
+        templateNo,
+        attachmentLink,
+        fileName,
+        record
+      }
+    })
+  }
+
+  return (
+    <StyledButtonsDiv>
+      <StyledButton {...{type: "primary", icon: 'printer', ...customProps}} onClick={openPdf}>{title}</StyledButton>
+    </StyledButtonsDiv>
+  )
+}
+
+PrintButton.propTypes = {
+  title: PropTypes.string,
+  templateNo: PropTypes.string.isRequired,
+  entityLink: PropTypes.string.isRequired,
+  attachmentLink: PropTypes.string.isRequired,
+  fileName: PropTypes.string.isRequired,
+}
+
+import {connect} from 'dva';
+export default connect()(PrintButton);

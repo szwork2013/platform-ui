@@ -1,0 +1,64 @@
+import { modelTemplate } from 'utils';
+
+import service from 'service';
+import config from 'config';
+
+//权限模型定义
+const namespace = {
+  name: 'plan_item',
+  title:'需求计划项',
+  clazz: 'PlanItem', //模型对应的后台实体类
+  linkAttrs:[]
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+    },
+    size: 100, //指定每页记录数
+    sort: 'o.id,asc' //缺省排序规则
+  },
+  titleRender: (record)=>'',
+  effects: {
+    //表单消息：打开支付标签
+    *addRows ({type,payload}, { call, put,select }) {
+      //结构参数
+      let { rows,dataKey,planUrl}=payload;
+      if(!rows)return;
+
+      const namespace = service.getNamespace(type);
+
+      let state = yield select(state=>state[namespace]);
+      let list = state.list;
+      if (dataKey) {
+        let viewData = state.viewData||[];
+        let findResult = viewData.find((r) => r.key == dataKey);
+        if(!findResult){
+          let newOne={key:dataKey, data: {list:[]}};
+          viewData.push(newOne);
+        }
+        list=findResult.data.list;
+      }
+      //创建行
+      rows.map((item,index)=>{
+        let newRow={material:item,departmentPlan:planUrl, _isNew: true, _key: new Date().getTime()+index};
+        //原來有的不添加；
+        let oldRow=list.find(r=>r.material.id==item.id);
+        if(!oldRow)
+        list.push(newRow);
+      });
+      if(dataKey){
+        yield put({
+          type: 'save', payload: {viewData:state.viewData}
+        })
+      }else{
+        yield put({
+          type: 'save', payload: { list}
+        })
+      }
+    },
+
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

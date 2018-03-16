@@ -1,0 +1,53 @@
+import service from 'service';
+
+import { config} from 'utils';
+const { api } = config; //取得RESTful api配置信息
+
+export const constructSearchParam = (conditionData) => {
+  if (!conditionData) return;
+  let where = '';
+
+  for(let attrName in conditionData){
+
+
+    if (attrName=='where' || attrName=='searchWhere') continue;
+    let attrValue = conditionData[attrName];
+    if (attrValue==-1 || attrValue=='') continue;
+
+    let attrWhere = '';
+
+    if (attrName=='year') { //资金来源
+      let year = conditionData.year;
+      if (year) attrWhere='o.year='+year;
+    }else if(attrName=='value'&&attrValue!=-1) {
+      attrWhere = 'o.category.name like '+ "'%"+attrValue+"%'";
+    }
+
+    if (attrWhere && attrWhere!='')
+      where += where=='' ? attrWhere : ' and '+attrWhere;
+  }
+
+  return {
+    filter: { //过滤规则
+      where,
+    },
+    size: 20,
+    sort: 'o.category.sortNo,desc'
+  };
+}
+
+//构造年度选择信息
+export const getYearList = () => {
+  const { rootPath } = api; //RESTful请求的根路径
+  const url = rootPath+'/indicator_yearlyindicator/search/getYearList';
+  return service.queryRecord(url);
+}
+
+//构造年度选择信息
+export const initDeptYearly = (payload) => {
+  const { rootPath } = api; //RESTful请求的根路径
+  const url = rootPath+'/indicator_yearlyindicator/initDeptYearly';
+  return service.queryRecord(url,payload);
+}
+
+

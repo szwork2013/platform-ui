@@ -1,0 +1,61 @@
+import React from 'react';
+import PropTypes from 'prop-types';
+
+import Layout from './Layout';
+
+import {Redirect, Route, Switch} from 'dva/router';
+import dynamic from 'dva/dynamic';
+
+//注册公用模型
+import {modelRegister} from 'utils';
+import categoryModel from './category/model';
+modelRegister(categoryModel);
+import monthlyModel from './monthly/model';
+modelRegister(monthlyModel);
+import reportModel from './report/model';
+modelRegister(reportModel);
+import yearlyModel from './yearly/model';
+modelRegister(yearlyModel);
+import historyModel from './report/Form/History/historyModel';
+modelRegister(historyModel);
+
+const mainRoute = (props) => {
+  //解构参数
+  const {match} = props;
+
+  //动态加载路由
+  const categoryRoute = dynamic({
+    app,
+    component: () => import ('./category')
+  });
+  const yearlyRoute = dynamic({
+    app,
+    component: () => import ('./yearly')
+  });
+  const monthlyRoute = dynamic({
+    app,
+    component: () => import ('./monthly')
+  });
+  const reportRoute = dynamic({
+    app,
+    component: () => import ('./report')
+  });
+  const rootPath = match.path;
+  return (
+   <Layout {...props}>
+    <Switch>
+      <Redirect exact from={rootPath} to={rootPath + '/report'} push={true}/>
+      <Route path={rootPath + '/report'} component={reportRoute}/>
+      <Route path={rootPath + '/yearly'} component={yearlyRoute}/>
+      <Route path={rootPath + '/monthly'} component={monthlyRoute}/>
+      <Route path={rootPath + '/category'} component={categoryRoute}/>
+    </Switch>
+  </Layout>
+  )
+}
+
+mainRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default mainRoute;

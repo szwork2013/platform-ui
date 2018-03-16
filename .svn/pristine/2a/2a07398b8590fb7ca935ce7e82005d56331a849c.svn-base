@@ -1,0 +1,205 @@
+import React from 'react';
+import {Button, Alert} from 'antd';
+import {
+  ModuleLayout,
+  Tree,
+  View,
+  DropdownSelect,
+} from 'components';
+import {config} from 'utils';
+import service from 'service';
+import modelDefinition from '../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+function getWeekOfYear(){
+  var today = new Date();
+  var firstDay = new Date(today.getFullYear(),0, 1);
+  var dayOfWeek = firstDay.getDay(); 
+  var spendDay= 1;
+  if (dayOfWeek !=0) {
+    spendDay=7-dayOfWeek+1;
+  }
+  firstDay = new Date(today.getFullYear(),0, 1+spendDay);
+  var d =Math.ceil((today.valueOf()- firstDay.valueOf())/ 86400000);
+  var result =Math.ceil(d/7);
+  return result + 1;
+};
+
+let year = new Date().getFullYear();
+let week = getWeekOfYear();
+let deptId = service.userInfo.user.org.id;
+const { api } = config; //取得RESTful api配置信息
+let {rootPath} = api;
+let initHref = `${rootPath}/task_report/init`;
+
+class ViewComponent extends React.Component {
+  componentDidMount(){
+    service.httprequest(initHref,{});
+  }
+  render() {
+    const props = this.props;
+    let {dispatch, task_report:{selectedRows}} = props;
+    let info = undefined;
+    let applyEnd = false;
+    if(selectedRows && selectedRows.length>0){
+      if(selectedRows[0].taskState !== 'PROCEED'){
+        applyEnd = false;
+        info = <h2 style={{color:'red'}}>该任务已发出申请完成操作，不能再次发起申请完成操作</h2>
+      }
+      else
+        applyEnd = true;
+    }
+
+    const handleApplyDone = (e) => {
+      dispatch(
+        {type: 'tasks/openWfForm'}
+      );
+    }
+    const buttons = <Button type="primary" disabled={!applyEnd}
+    onClick={handleApplyDone}>申请完成</Button>;
+    //定义操作条属性
+    const actionBarProps = {
+      new: false, //显示新增按钮
+      delete: false, //显示删除按钮
+      newRow: false,
+      buttons: buttons,
+    }
+
+    const taskDeadlineRender = (text,record) =>{
+      return text.substring(0,10);
+    }
+    const isFeedbackRender = (text,record) =>{
+      let isFeedback = record.workLog;
+      if(isFeedback)
+        return <Alert message="是" type="success" showIcon />;
+      else
+        return <Alert message="否" type="warning" showIcon />;
+    }
+    //定义列表属性
+    const listProps = {
+      columns:[
+        {title: '任务', dataIndex: 'taskName', key: 'taskName', sorter:true, width: '300', link: 'open'},
+        {title: '详情', dataIndex: 'taskDescription', key: 'taskDescription', sorter:true, link: 'open'},
+        {title: '本周是否已反馈', dataIndex: 'isFadeback', key: 'isFadeback', width: '150',
+          render:isFeedbackRender},
+        {title: '完成期限', dataIndex: 'taskDeadline', key: 'taskDeadline',
+          width: '100',
+          render:taskDeadlineRender}
+      ],
+      rowSelection: {type:'radio'},
+    };
+
+    //翻页器属性
+    const paginationBarProps = {};
+    //定义过滤条件
+    const searchParam = {
+      filter: { //过滤规则
+        where: `o.year = ${year} and o.week = ${week} and o.task.dept.id = ${deptId} and o.task.state =2`, //条件
+      },
+      size: 20, //指定每页记录数
+      //排序规则：sortNo升序
+      sort: ['o.id,asc','o.task.id,asc'],
+    };
+    const yearWeekTree = (<Tree {...this.yearWeekTreeProps()}/>);
+    //sider属性
+    const treeProps = {
+      title: '年周',
+      icon: 'switcher',
+      width: 100,
+      className:'background: #fbfbfb !important;',
+      titleBar:{
+        className:'background: #ebf8f9 !important;'
+      }
+    };
+    return (
+      // <ModuleLayout menu={yearWeekTree} siderProps={treeProps} enableCollapsed={false}>
+      //   <View key={modelName+'ViewLayout'} {...props}
+      //     searchParam={searchParam}
+      //     modelName={modelName} //模型名称
+      //     editMode='row' //编辑模式：单行编辑
+      //     actionBar={actionBarProps} //操作条定义
+      //     paginationBar={paginationBarProps} //翻页器定义
+      //     list={listProps} //列表定义
+      //   />
+      // </ModuleLayout>
+      <View key={modelName+'ViewLayout'} {...props}
+        searchParam={searchParam}
+        modelName={modelName} //模型名称
+        editMode='row' //编辑模式：单行编辑
+        actionBar={actionBarProps} //操作条定义
+        paginationBar={paginationBarProps} //翻页器定义
+        list={listProps} //列表定义
+      />
+    )
+  }
+
+  //构造机构树的属性
+  yearWeekTreeProps(){
+    const props = props;
+    const treeProps = {
+      labelKey: 'name',
+      parentKey: 'parentId',
+      modelName: 'task_report',
+      searchParam: {
+        filter: undefined,
+        search: 'getYearWeekTree'
+      },
+      type: 'tree',
+      dynamicLoading: true,
+      defaultSelectFirst: false,
+      onSelect: (key, e, initQuery) => {
+        if(e.selected){
+          let fullName = e.selectedNodes[0].props.fullName;
+          year = fullName.substring(0,4);
+          if(fullName.length > 4){
+            week = fullName.substring(5,fullName.length);
+          }
+          const searchParam = {
+            filter: { //过滤规则
+              where: `o.year = ${year} and o.week = ${week} and o.task.dept.id = ${deptId}`, //条件
+            },
+            size: 20, //指定每页记录数
+            //排序规则：sortNo升序
+            sort: ['o.id,asc','o.task.id,asc'],
+          };
+          this.props.dispatch({
+            type: modelName+'/query',
+            payload: {
+                searchParam: searchParam,
+                where: initQuery ? '' : undefined,
+            }
+        });
+        }
+      },
+    };
+    return treeProps;
+  }
+
+  //构造任务分类树的属性
+  categoryTreeProps = () => {
+    const props = props;
+    const treeProps = {
+      type:'tree',
+      labelKey: 'name',
+      parentKey: 'parent',
+      modelName: 'task_categorys',
+      searchParam: {
+        projection: 'list',
+        filter: {
+          where: '1=1'
+        },
+        sort: 'o.sortNo,asc',
+        size: 1000, //指定每页记录数
+      },
+    };
+    return treeProps;
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({task_report, loading, apptabs:{tabs}}) =>
+  ({task_report, loading: loading.models[modelName], tabs})
+)(ViewComponent);

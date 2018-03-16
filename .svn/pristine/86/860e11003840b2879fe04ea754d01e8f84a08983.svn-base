@@ -1,0 +1,20 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+//模型定义
+const namespace = {
+  name: 'expenditure_fundsource',
+  title:'资金来源',
+  clazz: 'FundSource',
+  linkAttrs: ['org'],
+};
+
+const typeArr = window.location.href.split('/');
+const type = (typeArr[typeArr.length-1] == 'station') ? 0 : 1;
+
+
+const modelParam = {
+  form: Form, //使用的表单
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

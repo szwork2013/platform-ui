@@ -1,0 +1,103 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+import service from 'service';
+import config from 'config';
+
+//权限模型定义
+const namespace = {
+  name: 'purchase_plan',
+  title:'采购计划',
+  clazz: 'PurchasePlan', //模型对应的后台实体类
+  linkAttrs:['createdBy']
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+
+    },
+    size: 20, //指定每页记录数
+    sort: 'o.id,asc' //缺省排序规则
+  },
+  form: Form, //使用的表单
+  titleRender: (record)=>{
+    if(record&&record.year){
+      return record.year+'年'+record.month+'月采购计划';
+    }else{
+      return '新采购计划';
+    }
+  },
+  effects: {
+    //表单消息：汇总需求计划
+    *collectDemandPlan ({payload}, { call, put,select }) {
+      //解构消息
+      let { record } = payload;
+      let recordId=service.getRecordId(record);
+      let dataKey=recordId+'3'+record.type;
+      let result=yield call(service.updateRecord,service.parseRecordUrl(record)+'/collect_plan',{});
+
+      if(result){
+        let searchParam=  {
+          filter: { //过滤规则
+            clazz: 'PlanItem', //模型对应的后台实体类
+            where:  'o.purchasePlan.id='+recordId, //条件
+          },
+          size: 100, //指定每页记录数
+          sort: 'o.id,asc', //缺省排序规则
+        };
+        yield put ({
+          type:'plan_item/query',
+          payload: {
+            searchParam,
+            dataKey:dataKey,
+          }
+        });
+      }
+    },
+
+    //表单消息：查看需求计划
+    *viewDemandPlan ({payload}, { call, put,select }) {
+      //解构消息
+      let { record } = payload;
+      let demandPlans=service.getRecordLinkAttr(record,'demandPlans');
+      if(demandPlans&&demandPlans.length>0){
+        let demandPlan=demandPlans[0];
+        demandPlan._links.self.href=service.constructRecordUrl({ modelName: 'demand_plan', id: demandPlan.id });
+        yield put({
+          type: 'demand_plan/open',
+          payload: {record:demandPlan,state:{mode:'edit'}}
+        })
+      }
+    },
+
+    //表单消息：盖章
+    *stamp ({payload}, { call, put,select }) {
+      //结构参数
+      let { record,href }=payload;
+      const user = service.userInfo.user;
+      let callParam = {
+        method: 'get',
+        data: {
+          entityLink:service.getHrefOfLinkAttr(record).replace(config.API,''),
+          sealLink:'/orgs/'+user.org.id,
+          sealCategory:'seal',
+        }
+      }
+      let result =yield call(service.httprequest,config.API+'/stamp',callParam);
+      if(!result) return;
+      //调用接口更新tab的model
+      yield put ({
+        type:'apptabs/updateTab',
+        payload: {
+          key: href,
+          model: {record, state: {
+            origin: Object.assign(record)
+          }}
+        },
+      });
+    },
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

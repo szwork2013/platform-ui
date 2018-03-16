@@ -1,0 +1,106 @@
+import { Select } from 'antd'
+import service from 'service';
+
+class List extends React.Component {
+  render(){
+    //解构参数
+    const {
+      modelName, //选项数据来源模型
+      model, //dropdownSelect模型
+      uid, //组件的唯一id
+      labelKey='name', //显示名称的字段
+      initialValue, //初始值
+      multiple, //是否允许多选
+      tags,//是否可输入
+      placeholder, //描述信息
+      disabled,
+      onChange, //组件值变化事件处理
+      onSelect, //节点选中事件处理
+      options = [], //选项列表
+      valueKey , //值字段
+      controlProps, //传递给Select的属性
+    } = this.props;
+
+    //构造构件属性
+    const componentProps = {
+      mode: multiple ? tags? 'tags': 'multiple' : '',
+      tokenSeparators: tags?[',']:undefined,
+      value: tags&&initialValue?initialValue.split(','):initialValue,
+      placeholder,
+      disabled,
+      showSearch: true,
+      optionFilterProp: 'title',
+      onChange:(value)=>{ if(tags) {
+          onChange(value.toString(','));
+        }
+        else {
+          onChange(value);
+        }
+      },
+      onSelect,
+      ...controlProps,
+    }
+
+    //情形1：选项数据来自于参数定义，而不是指定模型
+    if(!modelName) {
+      //显示UI
+      return(
+        <Select {...componentProps}>
+          { renderOptions(options, labelKey, valueKey||"id") }
+        </Select>
+      );
+    }
+
+    //情形2：选项数据来自于模型
+    //获取数据
+    let data = model.data.find(r=>r.key==uid);
+    if(!data||!data.list) {
+      data = {list:[]};
+      componentProps.value = undefined;
+    }
+
+    //显示UI
+    return(
+      <Select {...componentProps}>
+        { renderOptions(data.list, labelKey, valueKey) }
+      </Select>
+    );
+
+    //根据模型数据构造选项
+    function renderOptions(list, labelKey='name', valueKey) {
+      if (!list) return null;
+      return list.map( (record,index) => {
+        const title = record[labelKey];
+        let key = service.parseRecordUrl(record) || title;
+        if(valueKey&&(record[valueKey]||record[valueKey]==0))
+          key=record[valueKey]+'';
+        return(
+          <Select.Option title={title} key={key+index} value={key} dataRef={record}>
+            {title}
+          </Select.Option>
+        )
+      });
+    }
+  }
+}
+
+import PropTypes from 'prop-types';
+List.propTypes = {
+  model: PropTypes.object.isRequired,
+  uid: PropTypes.string.isRequired,
+  labelKey: PropTypes.string,
+  initialValue:  PropTypes.oneOfType([
+    PropTypes.array,
+    PropTypes.string,
+  ]),
+  multiple: PropTypes.bool,
+  tags: PropTypes.bool,
+  placeholder: PropTypes.string,
+  disabled: PropTypes.bool,
+  list:PropTypes.array,
+}
+
+import {connect} from 'dva';
+export default connect(({dropdownSelect}) =>
+  ({model: dropdownSelect})
+)(List);

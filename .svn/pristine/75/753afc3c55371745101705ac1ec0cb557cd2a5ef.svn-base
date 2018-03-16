@@ -1,0 +1,7 @@
+import dynamic from 'dva/dynamic';
+const Form = dynamic({
+  app,
+  component: () => import('./HistoryView')
+});
+
+export default Form;

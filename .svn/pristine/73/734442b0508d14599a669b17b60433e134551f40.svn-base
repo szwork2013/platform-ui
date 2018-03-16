@@ -1,0 +1,124 @@
+
+import service from 'service';
+import Form from './Form';
+import myService from './service';
+import {getYearList,initMonthlyIndicator,constructSearchParam} from './service';
+
+export default {
+  namespace: 'indicator_report',
+  state: {
+    statData: [], //统计数据
+    conditionData:{}, //条件数据
+    yearOptions:[],
+    deptOptions:[],
+  },
+  reducers: {
+    form:Form,
+    save(state, {payload}) {
+      return {...state, ...payload}
+    }
+  },
+
+  subscriptions: {
+    setup ({ dispatch }) {
+
+    },
+  },
+  effects: {
+    //初始化模型消息
+    *initialize({payload}, {select, call, put}) {
+      //初始化模型数据
+      //设置年度为当前年度
+      let date=new Date();
+      let year=date.getFullYear();
+      let month=date.getMonth()+1;
+      if(month==1){ //默认显示上月数据
+        month=12;
+        year=year-1;
+      }else{
+        month=month-1;
+      }
+      let conditionData={};
+      let yearOptions=[];
+      let statData=[];
+      conditionData.year=year;
+      conditionData.month=month;
+      yearOptions=yield call(getYearList,payload);
+      //初始化选项
+      let hasThisYear=false;
+      let hasLastYear=false;
+      if(yearOptions&&yearOptions.length>0){
+        for(let i=0;i<yearOptions.length;i++){
+          if(yearOptions[i]==year){
+              hasThisYear=true;
+          }
+          if(yearOptions[i]==year-1){
+              hasLastYear=true;
+          }
+        }
+
+      }
+      if(!hasThisYear){
+        yearOptions.push(year);
+      }
+      if(!hasLastYear){
+        yearOptions.push(year-1);
+      }
+      //修改模型数据
+      yield put({
+        type: 'save',
+        payload: {conditionData, yearOptions,statData}
+      });
+       yield call(initMonthlyIndicator,conditionData);
+       //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = [];
+      yield put({
+        type: 'indicator_monthlyindicator/query',
+        payload: {searchParam, initQuery: true}
+      })
+    },
+
+    //修改条件数据消息
+    *changeConditionData({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      conditionData={...conditionData,...payload};
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });
+
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = [];
+      yield put({
+        type: 'indicator_monthlyindicator/query',
+        payload: {searchParam}
+      })
+    },
+
+    //消息处理：获取起草统计信息
+    *stat({payload}, {select, call, put}) {
+      //调用服务获取统计信息
+      let statData = yield call(getYearReport, payload);
+      if (statData == null) statData=[];
+      //修改模型的统计信息
+      yield put({
+        type: 'save',
+        payload: {statData}
+      });
+    },
+    //消息处理：获取起草统计信息
+    *statList({payload}, {select, call, put}) {
+      //调用服务获取统计信息
+      let statData = yield call(getYearReportList, payload);
+      if (statData == null) statData=[];
+      //修改模型的统计信息
+      yield put({
+        type: 'save',
+        payload: {statData}
+      });
+    },
+  }, // end of effects
+};

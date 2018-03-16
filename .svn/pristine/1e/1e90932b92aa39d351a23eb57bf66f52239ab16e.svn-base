@@ -1,0 +1,308 @@
+import { routerRedux } from 'dva/router';
+import { Button } from 'antd';
+import { View, ExportButton } from 'components';
+
+import ResultStatInfo from '../ResultStatInfo';
+
+import service from 'service';
+import { constructExportUrl, travelExpenseExportUrl, tripExpenseExportUrl } from '../../../service';
+import { accountingNumberFormat } from 'utils';
+import Form from '../../../../execution/Form';
+
+//结果视图
+const ResultView = (props) => {
+  const { modelName, conditionData } = props;
+  const stateOptions = [
+    { 'id': 1, key: 'DRAFT', 'name': '草稿' },
+    { 'id': 2, key: 'BUDGET_CHECK', 'name': '预算检查' },
+    { 'id': 3, key: 'COMPANY_APPROVAL', 'name': '公司审批' },
+    { 'id': 4, key: 'TENDER', 'name': '招标' },
+    { 'id': 5, key: 'PICKETAGE', 'name': '定标' },
+    { 'id': 6, key: 'CONTRAC_CHECK', 'name': '合同审查' },
+    { 'id': 7, key: 'CONTRAC_NO', 'name': '合同编号' },
+    { 'id': 8, key: 'PAYMENT', 'name': '支付报销' },
+    { 'id': 9, key: 'END', 'name': '办结' },
+    { 'id': 0, key: 'ANNUL', 'name': '废止' },
+  ];
+  //定义操作条属性
+  const buttons = (
+    <span>
+      <Button type="dashed" icon="reload" onClick={handleClearButtonClicked}>重置</Button>
+      {renderExportButton()}
+      {renderExportContactButton()}
+      {renderExportTravelExpense()}
+      {renderExportTripExpense()}
+    </span>
+  )
+
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: false, //显示删除按钮
+    newRow: false,
+    buttons: buttons
+  }
+
+  //定义列表属性
+  const listProps = {
+    scrollx: 1275,
+    form: <Form modelName={modelName} />, //定义打开记录的表单
+    columns: [
+      {
+        title: '项目名称',
+        width: 120,
+        dataIndex: 'fundSource.name',
+        key: 'fundSource.name',
+        link: 'open',
+        sorter: true,
+
+        textRender: (text, record) => {
+          return record.fundSourceName
+        }
+      },
+      {
+        title: '事项名称',
+        width: 260,
+        dataIndex: 'projectName',
+        key: 'projectName',
+        link: 'open',
+        textRender: projectNameRender,
+        sorter: true,
+
+      },
+      {
+        title: '科目',
+        width: 60,
+        dataIndex: 'categoryFullNo',
+        key: 'categoryFullNo',
+        textRender: categoryNoRender,
+        fulltext: false,
+      },
+      {
+        title: '创建人',
+        width: 80,
+        dataIndex: 'createdByName',
+        key: 'createdByName',
+        fulltext: false,
+      },
+      {
+        title: '创建时间',
+        width: 155,
+        dataIndex: 'createdTime',
+        key: 'createdTime',
+        fulltext: false
+      },
+      {
+        title: '预算(元)',
+        width: 100,
+        dataIndex: 'budget',
+        key: 'budget',
+        sorter: true,
+        fulltext: false,
+        textRender: (value) => {
+          if (!value)
+            return '0.00';
+          return accountingNumberFormat(value);
+        },
+        className: 'xpiui-view-col-right'
+      },
+      {
+        title: '合同(元)',
+        width: 100,
+        dataIndex: 'biddingresultMoney',
+        key: 'biddingresultMoney',
+        sorter: true,
+        fulltext: false,
+        textRender: (value) => {
+          if (!value)
+            return '0.00';
+          return accountingNumberFormat(value);
+        },
+        className: 'xpiui-view-col-right'
+      },
+      {
+        title: '结算(元)',
+        width: 100,
+        dataIndex: 'settlementMoney', //2017-12-21 原来结算金额字段为settlement 会导致视图显示不正常,会和其他列合并 有可能是该字段
+        key: 'settlementMoney',       //和react关键字冲突,具体原因不详,改为settlementMoney显示正常
+        sorter: true,
+        fulltext: false,
+        textRender: (value) => {
+          if (!value)
+            return '***';
+          return accountingNumberFormat(record.settlementMoney);
+        },
+        className: 'xpiui-view-col-right'
+      },
+      {
+        title: '审定(元)',
+        width: 100,
+        dataIndex: 'approve',
+        key: 'approve',
+        sorter: true,
+        fulltext: false,
+        textRender: (value) => {
+          if (!value)
+            return '***';
+          return accountingNumberFormat(value);
+        },
+        className: 'xpiui-view-col-right'
+      },
+      {
+        title: '已支付(元)',
+        width: 100,
+        dataIndex: 'paymentTotal',
+        key: 'paymentTotal',
+        sorter: false,
+        fulltext: false,
+        textRender: (value) => {
+          if (!value)
+            return '***';
+          return accountingNumberFormat(value);
+        },
+        className: 'xpiui-view-col-right'
+      },
+      {
+        title: '审批状态', dataIndex: 'state', key: 'state', sorter: true,
+        textRender: colTextRenderOfState,
+        className: 'xpiui-view-col-center',
+      },
+    ]
+  };
+
+  //翻页器属性
+  const paginationBarProps = {
+    controlProps: {
+      simple: true
+    },
+    reloadButton: false
+  };
+
+  return (<View {...props} notQueryData={true} actionBar={actionBarProps} //操作条定义
+    list={listProps} //列表定义
+    paginationBar={paginationBarProps} onSearch={handleOnSearch} />
+  )
+
+  //科目编号构造
+  function categoryNoRender(text, record) {
+    let fullNo = record && record.categoryFullNo;
+    if (!fullNo || fullNo == '')
+      return '***';
+    let index = fullNo.indexOf('.');
+    if (index < 0)
+      return fullNo;
+    if (record.serialNo != null && record.serialNo != '') {
+      return fullNo.substring(index + 1) + '.' + record.serialNo;
+    } else {
+      return fullNo.substring(index + 1);
+    }
+
+  }
+
+  //状态列的显示文本构造函数
+  function colTextRenderOfState(text, record) {
+    if (!record.state) return '***';
+    const options = stateOptions;
+    const option = options.find((r) => r.key == text);
+    if (option) {
+      return option.name;
+    }
+    else {
+      return '***';
+    }
+  }
+
+  //项目名称 render
+  function projectNameRender(text, record) {
+    let categoryFullName = record && record.categoryFullName;
+    let projectName = record.projectName;
+    let nameArray = [];
+    if (projectName && projectName.indexOf('/') >= 0) {
+      nameArray = projectName.split('/');
+    }
+    if (categoryFullName && categoryFullName != '') {
+      if (categoryFullName.indexOf('差旅费') >= 0) {
+        if (nameArray.length >= 2) {
+          let index = nameArray[1].indexOf('至');
+          if (index > 0) {
+            projectName = nameArray[0] + nameArray[1].substring(0, index) + '差旅费'
+            return projectName
+          }
+        }
+      }
+      if (categoryFullName.indexOf('业务招待费') >= 0) {
+        if (nameArray.length >= 3) {
+          // projectName = nameArray[1] + nameArray[0].replace('至', '') + '业务招待费'
+          let startTime = nameArray[0].substring(0, 10)
+          projectName = nameArray[1] + startTime + '业务招待费'
+          return projectName
+        }
+      }
+    }
+
+    return projectName;
+  }
+
+  //构造导出按钮
+  function renderExportButton() {
+    let url = constructExportUrl({ conditionData, exportName: 'list', templateNo: 'exp.query.list' });
+    let exportProp = {
+      url,
+      title: '导出项目信息',
+      templateNo: 'exp.query.list'
+    }
+    return (<ExportButton {...exportProp} />);
+  }
+
+  //构造导出合同汇总表按钮
+  function renderExportContactButton() {
+    let url = constructExportUrl({ conditionData, exportName: 'contact_sum', templateNo: 'exp.query.contact' });
+    let exportProp = {
+      url,
+      title: '导出已签合同',
+      templateNo: 'exp.query.list'
+    }
+    return (<ExportButton {...exportProp} />);
+  }
+
+  //构造导出差旅费按钮
+  function renderExportTravelExpense() {
+    let url = travelExpenseExportUrl({ conditionData });
+    return (
+      <a href={url}>
+        <Button icon="download">导出差旅费</Button>
+      </a>
+    );
+  }
+
+  //构造导出业务招待费按钮
+  function renderExportTripExpense() {
+    let url = tripExpenseExportUrl({ conditionData });
+    return (
+      <a href={url}>
+        <Button icon="download">导出业务招待费</Button>
+      </a>
+    );
+  }
+
+  //处理清除按钮点击事件
+  function handleClearButtonClicked() {
+    props.dispatch({ type: 'expenditure_queryform/initialize' });
+  }
+
+  //处理按钮条检索事件
+  function handleOnSearch({ where }) {
+    //发消息通知模型条件发生变化
+    props.dispatch({
+      type: 'expenditure_queryform/changeConditionData', payload: {
+        where
+      }
+    })
+  }
+}
+
+import { connect } from 'dva';
+export default connect(({ expenditure_queryform, expenditure_queryform: {
+    conditionData
+  }, loading, apptabs: {
+    tabs
+  } }) => ({ expenditure_queryform, conditionData, loading: loading.models.expenditure_queryform, tabs }))(ResultView);

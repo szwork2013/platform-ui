@@ -1,0 +1,41 @@
+import React from 'react';
+import PropTypes from 'prop-types';
+
+import {Redirect, Route, Switch} from 'dva/router';
+import dynamic from 'dva/dynamic';
+
+import Layout from './Layout';
+//注册模块模型
+import {modelRegister} from 'utils';
+import executionScreenModel from './execution/model';
+import executionScreenParamsModel from './execution/paramModel';
+modelRegister(executionScreenModel);
+modelRegister(executionScreenParamsModel);
+const mainRoute=(props) => {
+  //解构参数
+  const {
+    match
+  } = props;
+
+  //动态加载路由
+  const executionScreenRoute = dynamic({
+    app,
+    component: () => import('./execution/ListView')
+  });
+
+  const rootPath = match.path;
+  return (
+    <Layout {...props}>
+      <Switch>
+        <Redirect exact from={rootPath}  to={rootPath+'/execution'} push={true}/>
+        <Route path={rootPath+'/execution'} component={executionScreenRoute} />
+      </Switch>
+    </Layout>
+  )
+}
+
+mainRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default mainRoute;

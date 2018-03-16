@@ -1,0 +1,13 @@
+import History from './History';
+
+//权限定义表单
+const EmbeddedForm = (props) => {
+	//显示UI
+	return (
+    <div style={{padding: '1px'}}>
+            <History {...props}/>
+    </div>
+	);
+}
+
+export default EmbeddedForm;

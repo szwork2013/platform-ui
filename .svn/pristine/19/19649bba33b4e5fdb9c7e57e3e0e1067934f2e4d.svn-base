@@ -1,0 +1,287 @@
+import React from 'react'
+import PropTypes from 'prop-types'
+
+import { Redirect, Route, Switch } from 'dva/router';
+import dynamic from 'dva/dynamic';
+import Layout from './Layout';
+
+
+//模块路由
+const mainRoute = (props) => {
+  const {
+    match,
+  } = props;
+
+  //动态加载路由
+  const companyRoute = dynamic({
+    app,
+    component: () => import('./itconsumable/company')
+  });
+  const allDepartmentRoute = dynamic({
+    app,
+    component: () => import('./itconsumable/alldepartment')
+  });
+  const departmentRoute = dynamic({
+    app,
+    component: () => import('./itconsumable/department')
+  });
+  const unitsRoute = dynamic({
+    app,
+    component: () => import('./itconsumable/units')
+  });
+  //物资采购
+  const purchaseRoute = dynamic({
+    app,
+    component: () => import('./itconsumable/purchase')
+  });
+  const unitsMaterialPurchaseRoute = dynamic({
+    app,
+    component: () => import('./itconsumable/purchase/UnitsView')
+  });
+  const itOfficePurchaseRoute = dynamic({
+    app,
+    component: () => import('./itoffice/purchase')
+  });
+  const unitsITOfficePurchaseRoute = dynamic({
+    app,
+    component: () => import('./itproduce/purchase/UnitsView')
+  });
+  const officeSuppliesPurchaseRoute = dynamic({
+    app,
+    component: () => import('./officesupplies/purchase')
+  });
+  const unitsOfficeSuppliesPurchaseRoute = dynamic({
+    app,
+    component: () => import('./officesupplies/purchase/UnitsView')
+  });
+  const uninstallEquipmentPurchaseRoute = dynamic({
+    app,
+    component: () => import('./uninstall/purchase')
+  });
+  const unitsUninstallEquipmentPurchaseRoute = dynamic({
+    app,
+    component: () => import('./uninstall/purchase/UnitsView')
+  });
+
+  const supplierRoute = dynamic({
+    app,
+    component: () => import('./supplier')
+  });
+  const materialCategoryRoute = dynamic({
+    app,
+    component: () => import('./material/MaterialCategoryView')
+  });
+  const materialCatalogueRoute = dynamic({
+    app,
+    component: () => import('./material/MaterialCatalogueView')
+  });
+  const materialImportRoute = dynamic({
+    app,
+    component: () => import('./material/MaterialImportView')
+  });
+  const materialRoute = dynamic({
+    app,
+    component: () => import('./material')
+  });
+  //2018.1.24 yjx
+  const officecompanyRoute = dynamic({
+    app,
+    component: () => import('./itoffice/company')
+  });
+  const officeallDepartmentRoute = dynamic({
+    app,
+    component: () => import('./itoffice/alldepartment')
+  });
+  const officedepartmentRoute = dynamic({
+    app,
+    component: () => import('./itoffice/department')
+  });
+  const materialOfficeCataloguelRoute = dynamic({
+    app,
+    component: () => import('./material/OfficeCatalogueView')
+  });
+  const materialOfficeEquipmentImportRoute = dynamic({
+    app,
+    component: () => import('./material/EquipmentImportView')
+  });
+  //2018.1.25 yjx
+  const uninstallCompanyRoute = dynamic({
+    app,
+    component: () => import('./uninstall/company')
+  });
+  const uninstallAllDepartmentRoute = dynamic({
+    app,
+    component: () => import('./uninstall/alldepartment')
+  });
+  const uninstallDepartmentRoute = dynamic({
+    app,
+    component: () => import('./uninstall/department')
+  });
+  const uninstallUnitsRoute = dynamic({
+    app,
+    component: () => import('./uninstall/units')
+  });
+  const materialUnInstallCategoryRoute = dynamic({
+    app,
+    component: () => import('./material/UnInstallCategoryView')
+  });
+  const materialUnInstallInformationRoute = dynamic({
+    app,
+    component: () => import('./material/UnInstallInformationView')
+  });
+  const materialUnInstallImportRoute = dynamic({
+    app,
+    component: () => import('./material/UnInstallImportView')
+  });
+  const itproduceUnitsRoute = dynamic({
+    app,
+    component: () => import('./itproduce/units')
+  });
+  const materialItProduceCategoryRoute = dynamic({
+    app,
+    component: () => import('./material/ProduceCategoryView')
+  });
+  const materialItProduceInformationRoute = dynamic({
+    app,
+    component: () => import('./material/ProduceInformationView')
+  });
+  const materialItProduceImportRoute = dynamic({
+    app,
+    component: () => import('./material/ProduceImportView')
+  });
+  const engineerMaterialCompanyRoute = dynamic({
+    app,
+    component: () => import('./engineermaterial/company')
+  });
+  const engineerMaterialAllDepartmentRoute = dynamic({
+    app,
+    component: () => import('./engineermaterial/alldepartment')
+  });
+  const engineerMaterialDepartmentRoute = dynamic({
+    app,
+    component: () => import('./engineermaterial/department')
+  });
+  const engineerMaterialCategoryRoute = dynamic({
+    app,
+    component: () => import('./material/EngineerMaterialCategoryView')
+  });
+  const engineerMaterialInformationRoute = dynamic({
+    app,
+    component: () => import('./material/EngineerMaterialInformationView')
+  });
+  const engineerMaterialImportRoute = dynamic({
+    app,
+    component: () => import('./material/EngineerMaterialImportView')
+  });
+  //2018.1.26 yjx
+  const officesuppliesCompanyRoute = dynamic({
+    app,
+    component: () => import('./officesupplies/company')
+  });
+  const officesuppliesAllDepartmentRoute = dynamic({
+    app,
+    component: () => import('./officesupplies/alldepartment')
+  });
+  const officesuppliesUnitsRoute = dynamic({
+    app,
+    component: () => import('./officesupplies/units')
+  });
+  const officesuppliesDepartmentRoute = dynamic({
+    app,
+    component: () => import('./officesupplies/department')
+  });
+  const officesuppliesCategoryRoute = dynamic({
+    app,
+    component: () => import('./material/OfficeSuppliesCategoryView')
+  });
+  const officesuppliesInformationRoute = dynamic({
+    app,
+    component: () => import('./material/OfficeSuppliesCatalogueView')
+  });
+  const officesuppliesImportRoute = dynamic({
+    app,
+    component: () => import('./material/OfficeSuppliesImportView')
+  });
+  const officesuppliessupplierRoute = dynamic({
+    app,
+    component: () => import('./supplier/OfficeSuppliesView')
+  });
+  const hasNotPurchaseRoute = dynamic({
+    app,
+    component: () => import('./engineermaterial/company/View/HasNotPurchaseView')
+  });
+  const hasPurchaseRoute = dynamic({
+    app,
+    component: () => import('./engineermaterial/company/View/HasPurchaseView')
+});
+  const engineerMaterialPurchaseRoute = dynamic({
+    app,
+    component: () => import('./engineermaterial/purchase/View')
+});
+  const rootPath = match.path;
+  return (
+    <Layout {...props}>
+      <Switch>
+        <Redirect exact from={rootPath} to={rootPath + '/consumable/company'} push={true} />
+        <Route path={rootPath + '/consumable/company'} component={companyRoute} />
+        <Route path={rootPath + '/consumable/alldepartment'} component={allDepartmentRoute} />
+        <Route path={rootPath + '/consumable/department'} component={departmentRoute} />
+        <Route path={rootPath + '/consumable/units'} component={unitsRoute} />
+        <Route path={rootPath + '/consumable/materialsearch'} component={materialRoute} />
+        <Route path={rootPath + '/consumable/materialsetting/materialcategory'} component={materialCategoryRoute} />
+        <Route path={rootPath + '/consumable/materialsetting/materialcatalogue'} component={materialCatalogueRoute} />
+        <Route path={rootPath + '/consumable/materialsetting/materialimport'} component={materialImportRoute} />
+        <Route path={rootPath + '/supplier'} component={supplierRoute} />
+        <Route path={rootPath + '/officeequipment/company'} component={officecompanyRoute} />
+        <Route path={rootPath + '/officeequipment/alldepartment'} component={officeallDepartmentRoute} />
+        <Route path={rootPath + '/officeequipment/department'} component={officedepartmentRoute} />
+        <Route path={rootPath + '/officeequipment/materialmanagement/catalogue'} component={materialOfficeCataloguelRoute} />
+        <Route path={rootPath + '/officeequipment/materialmanagement/equipmentimport'} component={materialOfficeEquipmentImportRoute} />
+        <Route path={rootPath + '/uninstallequipment/company'} component={uninstallCompanyRoute} />
+        <Route path={rootPath + '/uninstallequipment/alldepartment'} component={uninstallAllDepartmentRoute} />
+        <Route path={rootPath + '/uninstallequipment/department'} component={uninstallDepartmentRoute} />
+        <Route path={rootPath + '/uninstallequipment/units'} component={uninstallUnitsRoute} />
+        <Route path={rootPath + '/uninstallequipment/materialsetting/category'} component={materialUnInstallCategoryRoute} />
+        <Route path={rootPath + '/uninstallequipment/materialsetting/equipmentinformation'} component={materialUnInstallInformationRoute} />
+        <Route path={rootPath + '/uninstallequipment/materialsetting/equipmentimport'} component={materialUnInstallImportRoute} />
+        <Route path={rootPath + '/itproduceequipment/units'} component={itproduceUnitsRoute} />
+        <Route path={rootPath + '/itproduceequipment/materialsetting/category'} component={materialItProduceCategoryRoute} />
+        <Route path={rootPath + '/itproduceequipment/materialsetting/equipmentinformation'} component={materialItProduceInformationRoute} />
+        <Route path={rootPath + '/itproduceequipment/materialsetting/equipmentimport'} component={materialItProduceImportRoute} />
+        <Route path={rootPath + '/engineermaterial/company'} component={engineerMaterialCompanyRoute} />
+        <Route path={rootPath + '/engineermaterial/alldepartment'} component={engineerMaterialAllDepartmentRoute} />
+        <Route path={rootPath + '/engineermaterial/department'} component={engineerMaterialDepartmentRoute} />
+        <Route path={rootPath + '/engineermaterial/materialsetting/engineermaterialcategory'} component={engineerMaterialCategoryRoute} />
+        <Route path={rootPath + '/engineermaterial/materialsetting/engineermaterialinformation'} component={engineerMaterialInformationRoute} />
+        <Route path={rootPath + '/engineermaterial/materialsetting/engineermaterialimport'} component={engineerMaterialImportRoute} />
+        <Route path={rootPath + '/officesupplies/company'} component={officesuppliesCompanyRoute} />
+        <Route path={rootPath + '/officesupplies/alldepartment'} component={officesuppliesAllDepartmentRoute} />
+        <Route path={rootPath + '/officesupplies/units'} component={officesuppliesUnitsRoute} />
+        <Route path={rootPath + '/officesupplies/department'} component={officesuppliesDepartmentRoute} />
+        <Route path={rootPath + '/officesupplies/materialsetting/officesuppliescategory'} component={officesuppliesCategoryRoute} />
+        <Route path={rootPath + '/officesupplies/materialsetting/officesuppliesCatalogue'} component={officesuppliesInformationRoute} />
+        <Route path={rootPath + '/officesupplies/materialsetting/officesuppliesimport'} component={officesuppliesImportRoute} />
+        <Route path={rootPath + '/purchase/itmaterial'} component={purchaseRoute} />
+        <Route path={rootPath + '/purchase/unitsmaterial'} component={unitsMaterialPurchaseRoute} />
+        <Route path={rootPath + '/purchase/itofficeequipment'} component={itOfficePurchaseRoute} />
+        <Route path={rootPath + '/purchase/untilitofficeequipment'} component={unitsITOfficePurchaseRoute} />
+        <Route path={rootPath + '/purchase/officesupplies'} component={officeSuppliesPurchaseRoute} />
+        <Route path={rootPath + '/purchase/untilofficesupplies'} component={unitsOfficeSuppliesPurchaseRoute} />
+        <Route path={rootPath + '/purchase/uninstallequipment'} component={uninstallEquipmentPurchaseRoute} />
+        <Route path={rootPath + '/purchase/unitsuninstallequipment'} component={unitsUninstallEquipmentPurchaseRoute} />
+        <Route exact path={rootPath + '/purchase/engineermaterial'}/>
+        <Route path={rootPath + '/purchase/engineermaterial/engineermaterial'} component={engineerMaterialPurchaseRoute} />
+        <Route path={rootPath + '/purchase/engineermaterial/hasnotpurchase'} component={hasNotPurchaseRoute} />
+        <Route path={rootPath + '/purchase/engineermaterial/haspurchase'} component={hasPurchaseRoute} />
+        <Route path={rootPath + '/purchase/materialsetting/supplier'} component={supplierRoute} />
+        <Route path={rootPath + '/officesupplies/materialsetting/supplier'} component={officesuppliessupplierRoute}/>
+      </Switch>
+    </Layout>
+  )
+}
+
+mainRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default mainRoute;

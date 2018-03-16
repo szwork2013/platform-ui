@@ -1,0 +1,84 @@
+import service from 'service';
+
+export default {
+  namespace : 'taskParams',
+  state : {
+    conditionData: {
+      state: ['2', '3']
+    }, //条件数据
+  },
+
+  reducers : {
+    save(state, {payload}) {
+      return {
+        ...state,
+        ...payload
+      }
+    }
+  },
+
+  subscriptions : {
+    setup({dispatch}) {}
+  },
+
+  effects : {
+    //初始化模型消息
+    *initialize({
+      payload
+    }, {select, call, put}) {
+      let searchParam = {
+        filter: undefined,
+        search: 'getTaskList',
+        size: 10, //指定每页记录数
+        //排序规则：sortNo升序
+        alias: 'f',
+        sort: 'f.dept asc'
+      };
+      yield put({
+        type: 'task/query',
+        payload: {
+          searchParam,
+          initQuery: true
+        }
+      })
+    },
+
+    //修改条件数据消息
+    *changeConditionData({type,payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      conditionData = {
+        ...conditionData,
+        ...payload
+      };
+      yield put({type: 'save', payload: {
+          conditionData
+        }});
+      //如果部门发生改变
+      if (payload.dept) {
+        yield put({
+          type: 'tasks/query',
+          payload: {
+            searchParam: {
+              deptId: payload.dept.id
+            }
+          }
+        })
+      }
+      //如果任务状态发生改变
+      if (payload.state) {
+        if(payload.state.length === 0){
+          payload.state = ['2','3','4'];
+        }
+        yield put({
+          type: 'tasks/query',
+          payload: {
+            searchParam: {
+              state: `in (${payload.state})`
+            }
+          }
+        })
+      }
+    }
+  }
+};

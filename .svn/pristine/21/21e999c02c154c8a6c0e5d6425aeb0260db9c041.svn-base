@@ -1,0 +1,133 @@
+import {Col, Button, Icon, Popover,Input, Select} from 'antd';
+import { Form as FormLayout, FormItem } from 'components';
+import {config} from 'utils';
+import service from 'service';
+let token = service.userInfo.token.value;
+const { api } = config; //取得RESTful api配置信息
+let {rootPath} = api;
+rootPath = rootPath.substring(0,rootPath.length-4);
+// let exporthref = `${rootPath}/task_report/export?xpnToken=${token}`;
+const Search = Input.Search;
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+const Option = Select.Option;
+
+//选项设置表单
+const OptionsForm = ( props ) => {
+  //解构参数
+  let {
+    conditionData={}, //条件数据
+    dispatch,
+  } = props;
+
+  function getExportHref(){
+    let exporthref = `${rootPath}/task_report/export?xpnToken=${token}&type==1`;
+    if(conditionData.state){
+      exporthref = exporthref + '&state='+`in (${conditionData.state})`;
+    }
+    if(conditionData.dept)
+      exporthref = exporthref + '&deptId='+conditionData.dept.id;
+    return exporthref;
+  }
+  
+
+  //构造FormItem的公共参数
+  const oneItemWidth = ['96%','10%','90%'];
+
+  const { getFieldDecorator, setFieldsValue } = props.form;
+  const itemProps = {
+    canEdit: true, getFieldDecorator,setFieldsValue, width: oneItemWidth,
+    controlProps:{allowClear:true}, required: false,
+  };
+
+  const handleSearch = (search) =>{
+    dispatch({type:'tasks/search',payload:{search}});
+  }
+
+  return (
+    <Form layout='inline' style={{height:'40px'}}>
+      <Row>
+        <Col span={5}>
+          {renderDeptSelect()}
+        </Col>
+        <Col span={6}>
+          {renderTaskStateSelect()}
+        </Col>
+        <Col span={5}>
+          <Search placeholder="输入任务名称搜索" enterButton="Search" onSearch={handleSearch}/>
+        </Col>
+        <Col span={5}>
+          <a href={getExportHref()}><Button>导出</Button></a>
+        </Col>
+      </Row>
+    </Form>
+  )
+
+
+  //构造部门选择组件
+  function renderDeptSelect() {
+    return(
+      <FormItem type='Select' {...itemProps}  initialValue={conditionData.dept&&conditionData.dept.href} placeholder='选择部门'
+        itemKey='dept' onChange={onDeptChange}
+        labelKey='orgName' modelName='orgs' searchParam={{
+          filter:{
+            where: 'o.type=2'
+          },
+          size:1000,
+          sort: ['o.type,asc','o.sortNo,asc']
+        }}
+      />
+    );
+  }
+
+    //构造任务状态选择组件
+function renderTaskStateSelect(){
+  return(
+    <Select style={{ width: 270 }} allowClear
+      placeholder="请选择任务状态"
+      mode="multiple"
+      onChange={(value) =>{
+        if(!value || value.length === 0){
+          value = ['2', '3', '4'];
+        }
+        dispatch({
+          type: 'taskParams/changeConditionData',
+          payload: {state:value}
+        });
+      }}>
+      <Option value="2,3">办理中</Option>
+      {/* <Option value="3">审批中</Option> */}
+      <Option value="4">已办结</Option>
+    </Select>
+  );
+}
+
+ //使用部门选中事件处理
+  function onDeptChange(value) {
+    let dept = 'all';
+    if(value){
+      dept = {
+        id: value.substring(value.lastIndexOf('/')+1,value.length),
+        href: value,
+      };
+    }
+    //发消息通知模型条件发生变化
+    props.dispatch({
+      type: 'taskParams/changeConditionData',
+      payload: {dept}
+    });
+    return true;
+  }
+}
+
+import { Form as AntdForm } from 'antd';
+const antdOptionsForm = AntdForm.create({})(OptionsForm);
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({
+  taskParams:{conditionData}
+}) =>
+  ({conditionData})
+)(antdOptionsForm);

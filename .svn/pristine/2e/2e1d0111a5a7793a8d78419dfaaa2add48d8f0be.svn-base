@@ -1,0 +1,573 @@
+import React from 'react';
+
+import {Button} from 'antd'
+
+import {Form as FormLayout, FormItem} from 'components';
+import TravelExpense from './TravelExpense';
+import ConferenceExpense from './ConferenceExpense';
+import BudgetSource from './BudgetSource';
+import UserBankInfoSelect from '../UserBankInfoSelect';
+
+import {StyledLabelTd as LabelCol, StyledTable as Table, StyledTd as Col, StyledTr as Row,} from '../../../styled';
+import {StyledStageDiv} from './styled';
+
+import service from 'service';
+import wfservice from 'wfservice';
+
+const FormContainer = FormLayout.FormContainer;
+
+//支出的模型名称
+const executionModelName = 'expenditure_executions';
+
+class ExecutionSection extends React.Component {
+  //构造函数：初始化组件
+  constructor(props) {
+    super(props);
+
+    //解构参数
+    const {record} = props;
+
+    //item宽度样式
+    this.itemWidth = ['100%', '0%', '100%'];
+
+    //设置数字格式
+    this.inputNumberProps = {
+      precision: 2,
+      size: 'medium',
+      formatter: (value) => {
+        return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      }
+    }
+
+    //是否有备用金
+    record._hasReserveFund = record.reserveFund && record.reserveFund != '' && record.reserveFund > 0 ? true : false;
+  }
+
+  //计算动态属性
+  constructDynamicProps = () => {
+    //解构参数
+    const props = this.props;
+    let {
+      record, //FormContainer注入：模型
+      canEdit = true, //FormContainer注入：是否可编辑
+      getFieldDecorator,
+      setFieldsValue,
+      formCanEdit,
+    } = props;
+
+    //获取当前用户信息
+    this.userName = service.userInfo.user.name;
+
+    //构造FormItem的公共参数
+    this.itemProps = {
+      placeholder: '',
+      getFieldDecorator,
+      setFieldsValue,
+      canEdit: canEdit ? formCanEdit : false,
+    };
+
+    //计算申请资金来源显示名称
+    this.budgetSourceName = '';
+    if (record.budgetSource) {
+      this.budgetSourceName = record.budgetSource;
+    }
+
+    //是否可以申请备用金
+    this.canApplyReserveFund = false;
+    if (record.budgetSource) {
+      if (record.budgetSource.indexOf("业务招待费") > 0 ||
+        record.budgetSource.indexOf("差旅费") > 0 ||
+        record.budgetSource.indexOf("运输费") > 0) {
+        this.canApplyReserveFund = true;
+      }
+    }
+  }
+
+  //渲染组件
+  render() {
+    const {record, formCanEdit, mode} = this.props;
+
+    //构造动态属性
+    this.constructDynamicProps();
+
+    const {itemProps, itemWidth} = this;
+
+    //显示UI
+    return (
+      <div>
+        <StyledStageDiv>第一步：预算申请</StyledStageDiv>
+        <Table>
+          <Row>
+            <LabelCol>预算来源</LabelCol>
+            <Col colSpan={4}>
+              <FormItem type='Input' {...itemProps} width={['85%', '0%', '100%']} canEdit={false} required={false}
+                        title='预算来源' itemKey='budgetSourceName' initialValue={this.budgetSourceName} placeholder=''
+              />
+              {this.itemProps.canEdit && <Button type="danger" onClick={this.selectFundSource}>修改预算来源</Button>}
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>事项名称</LabelCol>
+            <Col colSpan={5}>
+              <FormItem type='Input' {...itemProps} width={itemWidth}
+                        title='事项名称' itemKey='projectName' initialValue={record.projectName}
+                        controlProps={{onClick: this.handleProjectNameClick}}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>申请理由</LabelCol>
+            <Col colSpan={5}>
+              <FormItem type='TextArea' {...itemProps} width={itemWidth}
+                        title='申请理由' itemKey='moneyPurpose' initialValue={record.moneyPurpose}
+                        disable={!formCanEdit} controlProps={{autosize: {maxRows: 6}}}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>申请理由附件</LabelCol>
+            <Col colSpan={5}>
+              <FormItem title='申请理由附件' type='Attachment' {...itemProps} width={itemWidth}
+                        itemKey='_moneyPurposeAttachment' link={service.getHrefOfLinkAttr(record)} mode={mode}
+                        multiple required={false}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>申请金额（元）</LabelCol>
+            <Col colSpan={5}>
+              <FormItem type='InputNumber' {...itemProps} width={['260px', '0px', '260px']} min={1}
+                        title='申请金额' itemKey='budget' initialValue={record.budget}
+                        controlProps={{...(this.inputNumberProps)}}
+              />
+              {/*构造是否需要备用金选项*/}
+              {this.renderNeedReserveFundCheckbox()}
+
+              {/*构造备用金输入字段*/}
+              {this.renderReserveFundField()}
+            </Col>
+          </Row>
+
+          {/*构造收款人字段*/}
+          {this.renderPayeeFields()}
+
+          <Row>
+            <LabelCol>申请部门意见</LabelCol>
+            <Col colSpan={5}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                        title='申请部门意见' comments={wfservice.getComments(record, "setupApplyDept")}
+              />
+            </Col>
+          </Row>
+
+          {/*构造备用金审批意见栏*/}
+          {this.renderReserveFundCommentFinance()}
+          {this.renderReserveFundCommentOperateDept()}
+          {this.renderReserveFundCommentAccountant()}
+        </Table>
+
+        {/*构造第二步div*/}
+        {this.renderSecondStageDiv()}
+
+        {/*构造隐藏字段*/}
+        {this.renderHiddenFields()}
+      </div>
+    )
+  } // end of render()
+
+  //构造备用金字段
+  renderReserveFundField = () => {
+    if (!this.canApplyReserveFund) return <span/>;
+
+    const {record, formCanEdit} = this.props;
+    const {itemProps, itemWidth, inputNumberProps: controlProps} = this;
+
+    //是否显示备用金字段
+    let display = record._hasReserveFund ? '' : 'none';
+
+    //是否显示选择收款人按钮
+    let displayButton = true;
+    if (!formCanEdit ||
+      !record._hasReserveFund ||
+      !record.reserveFund ||
+      record.reserveFund == ''
+      || record.reserveFund <= 0) {
+      displayButton = false;
+    }
+
+    return (
+      <span style={{display}}>
+        <FormItem type='InputNumber' {...itemProps} controlProps={controlProps}
+                  width={['260px', '0px', '260px']}
+                  title='' itemKey='reserveFund' initialValue={record.reserveFund}
+                  required={record._hasReserveFund} max={record.budget} min={0}
+                  placeholder='请填写备用金金额'
+        />
+        {displayButton && <Button type="primary" onClick={this.selectReserveFundPayee}>选择收款人</Button>}
+      </span>
+    );
+  } // end of renderReserveFundField()
+
+  //构造收款人字段
+  renderPayeeFields = () => {
+    const {record} = this.props;
+
+    if (!record._hasReserveFund ||
+      !record.reserveFund ||
+      record.reserveFund == ''
+      || record.reserveFund <= 0) {
+      return null;
+    }
+
+    const {itemProps} = this;
+
+    const itemWidth = ['360px', '100px', '260px'];
+
+    //获取备用金收款人账户信息
+    const _reserveFundPayee = record._reserveFundPayee || service.getRecordLinkAttr(record, 'reserveFundPayee') || {};
+
+    const controlProps = {disabled: true}
+    return (
+      <Row>
+        <LabelCol>收款人信息</LabelCol>
+        <Col colSpan={5}>
+          <FormItem type='Input' {...itemProps} width={['160px', '60px', '100px']} required={true}
+                    controlProps={controlProps}
+                    title='' itemKey='_reserveFundPayeeName' initialValue={_reserveFundPayee.name}
+                    placeholder='请填写收款人'
+          />
+          <FormItem type='Input' {...itemProps} width={itemWidth} required={true} controlProps={controlProps}
+                    title='开户银行' itemKey='_reserveFundPayeeBank' initialValue={_reserveFundPayee.bank}
+          />
+          <FormItem type='Input' {...itemProps} width={itemWidth} required={true} controlProps={controlProps}
+                    title='银行账号' itemKey='_reserveFundPayeeBankno' initialValue={_reserveFundPayee.bankno}
+          />
+        </Col>
+      </Row>
+    );
+  } // end of renderPayeeFields()
+
+  //构造备用金审批意见栏：财务审核意见
+  renderReserveFundCommentFinance = () => {
+    const {record} = this.props;
+
+    if (!this.showReserveFundComments(record)) {
+      return null;
+    }
+
+    const {itemProps, itemWidth} = this;
+
+    return (
+      <Row>
+        <LabelCol>财务审核意见</LabelCol>
+        <Col colSpan={5}>
+          <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                    title='财务审核意见' comments={wfservice.getComments(record, "finance")}
+          />
+        </Col>
+      </Row>
+    )
+  } // end of renderReserveFundCommentFinance()
+
+  //构造备用金审批意见栏：经营部意见
+  renderReserveFundCommentOperateDept = () => {
+    const {record} = this.props;
+
+    if (!this.showReserveFundComments(record)) {
+      return null;
+    }
+
+    const {itemProps, itemWidth} = this;
+
+    return (
+      <Row>
+        <LabelCol>经营部意见</LabelCol>
+        <Col colSpan={5}>
+          <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                    title='经营部意见' comments={wfservice.getComments(record, "operateDept")}
+          />
+        </Col>
+      </Row>
+    )
+  } // end of renderReserveFundCommentOperateDept()
+
+  //构造备用金审批意见栏：总会计师意见
+  renderReserveFundCommentAccountant = () => {
+    const {record} = this.props;
+
+    if (!this.showReserveFundComments(record)) {
+      return null;
+    }
+
+    const {itemProps, itemWidth} = this;
+
+    return (
+      <Row>
+        <LabelCol>总会计师意见</LabelCol>
+        <Col colSpan={5}>
+          <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                    title='总会计师意见' comments={wfservice.getComments(record, "accountant")}
+          />
+        </Col>
+      </Row>
+    )
+  } // end of renderReserveFundCommentAccountant()
+
+  //是否显示备用金审批意见栏
+  showReserveFundComments = (record) => {
+    if (!this.canApplyReserveFund ||
+      !record._hasReserveFund ||
+      !record.reserveFund ||
+      record.reserveFund == ''
+      || record.reserveFund <= 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  //构造第二步div
+  renderSecondStageDiv = () => {
+    const {record} = this.props;
+    const {itemProps, itemWidth} = this;
+
+    return (
+      <div>
+        <StyledStageDiv style={{marginTop: 10}}>第二步：公司审批</StyledStageDiv>
+        <Table>
+          <Row>
+            <LabelCol>主管部门意见</LabelCol>
+            <Col colSpan={5}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                        title='主管部门意见' comments={wfservice.getComments(record, "lxzgbm")}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>计划部门意见</LabelCol>
+            <Col colSpan={5}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                        title='计划部门意见' comments={wfservice.getComments(record, "setupPlanDept")}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>分管副总经理意见</LabelCol>
+            <Col colSpan={5}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                        title='分管副总经理意见' comments={wfservice.getComments(record, "setupAssistantManager")}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>总经理意见</LabelCol>
+            <Col colSpan={5}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                        title='总经理意见' comments={wfservice.getComments(record, "setupManager")}
+              />
+            </Col>
+          </Row>
+        </Table>
+      </div>
+    );
+  } // end of renderSecondStageDiv()
+
+  //构造隐藏字段
+  renderHiddenFields = () => {
+    const {record} = this.props;
+    const {itemProps} = this;
+
+    return (
+      <div style={{display: 'none'}}>
+        <FormItem type='Input' {...itemProps} required={false}
+                  title='预算来源' itemKey='budgetSource' initialValue={record.budgetSource}
+        />
+        <FormItem type='Input' {...itemProps} required={false}
+                  title='来源' itemKey='sourceType' initialValue={record.sourceType}
+        />
+        <FormItem type='Input' {...itemProps} required={false}
+                  title='所属项目' itemKey='fundSource' initialValue={record.fundSource}
+        />
+        <FormItem type='Input' {...itemProps} required={false}
+                  title='所属分类' itemKey='category' initialValue={record.category}
+        />
+        <FormItem type='RadioGroup' {...itemProps} required={false}
+                  title='使用权限' itemKey='usePermission' initialValue={record.usePermission}
+                  list={[{'id': '1', 'name': '部门自行管理'}, {'id': '2', 'name': '公司统筹'}]}
+        />
+        <FormItem type='Input' {...itemProps} required={false}
+                  title='项目编号' itemKey='projectNo' initialValue={record.projectNo}
+        />
+        <FormItem type='InputNumber' {...itemProps} required={false}
+                  title='年度' itemKey='year' initialValue={record.year}
+        />
+        <FormItem type='InputNumber' {...itemProps} required={false}
+                  title='费用/合同' itemKey='type' initialValue={record.type}
+        />
+        <FormItem type='Input' {...itemProps} required={false}
+                  title='备用金收款人' itemKey='reserveFundPayee' initialValue={record.reserveFundPayee}
+        />
+      </div>
+    );
+  } // end of renderHiddenFields()
+
+  //构造是否需要备用金的Checkbox
+  renderNeedReserveFundCheckbox = () => {
+    if (!this.canApplyReserveFund) return null;
+
+    const {record, setFieldsValue} = this.props;
+    const {itemProps} = this;
+
+    let width = ['120px', '0px', '120px'];
+    return (
+      <FormItem type='Checkbox'
+                required={false}
+                title='备用金（元）:'
+                itemKey='_hasReserveFund'
+                {...itemProps}
+                width={width}
+                initialValue={record._hasReserveFund}
+                controlProps={{
+                  onChange: (e) => {
+                    if (!e.target.checked) {
+                      //清除备用金金额
+                      setFieldsValue({reserveFund: 0});
+                      record.reserveFund = 0;
+
+                      //清除备用金收款人
+                      setFieldsValue({_reserveFundPayee: null});
+                      setFieldsValue({reserveFundPayee: null});
+                      record._reserveFundPayee = null;
+                      record.reserveFundPayee = null;
+                    }
+                  }
+                }}
+      />
+    );
+  } // end of renderNeedReserveFundCheckbox()
+
+  //修改预算来源
+  selectFundSource = () => {
+    const {setFieldsValue, record, dispatch, modelName} = this.props;
+
+    //设置传递给对话框的参数
+    //清空选项，让用户重新选择
+    record._fundSourceObj = undefined;
+    record._fundSourceHref = undefined;
+    record._categoryObj = undefined;
+    record._categoryHref = undefined;
+    record._expenditureType = undefined;
+
+    if (!record.year) {
+      let date = new Date();
+      record.year = date.getFullYear();
+    }
+
+    //构造传递给对话框的表单属性
+    let formProps = service.constructPropsOfForm(modelName, record);
+
+    //显示对话框
+    dispatch({
+      type: 'modaldialog/show',
+      payload: {
+        iconType: 'info-circle-o',
+        title: '修改预算来源',
+        content: <BudgetSource {...formProps} />,
+        onOk: () => {
+          dispatch({
+            type: executionModelName + '/onSelectFundSourceOk',
+            payload: {setFieldsValue, record}
+          });
+        },
+        style: "width:650px !important;",
+      }
+    });
+  } // end of selectFundSource()
+
+  //选择备用金收款人
+  selectReserveFundPayee = () => {
+    const userName = this.userName;
+    const {record, dispatch, modelName, setFieldsValue} = this.props;
+
+    let where = 'o.user.name=\'' + userName + '\'';
+    if (service.isAdmin()) where = '1=1';
+
+    let searchParam = { //搜索条件
+      filter: {
+        where,
+      },
+      linkAttrs: ['user'],
+      size: 20, //指定每页记录数
+    };
+
+    const formProps = service.constructPropsOfForm(modelName, record);
+    formProps.searchParam = searchParam;
+    formProps.linkPropName = 'reserveFundPayee';
+    formProps.objPropName = '_reserveFundPayee';
+
+    //发送消息显示对话框
+    dispatch({
+      type: 'modaldialog/show',
+      payload: {
+        iconType: 'info-circle-o',
+        title: '选择收款人',
+        content: <UserBankInfoSelect {...formProps} />,
+        onOk: () => {
+          dispatch({
+            type: executionModelName + '/onSelectReserveFundPayeeOk',
+            payload: {setFieldsValue, record}
+          })
+        },
+        style: "width:800px !important;",
+      }
+    });
+  } // end of selectReserveFundPayee()
+
+  //项目名称单击处理
+  handleProjectNameClick = () => {
+    const {setFieldsValue, record, dispatch, modelName} = this.props;
+
+    let formProps = service.constructPropsOfForm(modelName, record);
+
+    //业务招待费
+    if (record.budgetSource.indexOf("业务招待费") >= 0) {
+      dispatch({
+        type: 'modaldialog/show',
+        payload: {
+          iconType: 'info-circle-o',
+          title: '业务招待费',
+          content: <ConferenceExpense {...formProps} />,
+          onOk: () => {
+            dispatch({
+              type: executionModelName + '/onSelectExpenseOk',
+              payload: {setFieldsValue, record}
+            })
+          },
+          style: "width:650px !important;height:360px !important;",
+        }
+      });
+    }
+
+    //差旅费
+    if (record.budgetSource.indexOf("差旅费") >= 0) {
+      dispatch({
+        type: 'modaldialog/show',
+        payload: {
+          iconType: 'info-circle-o',
+          title: '差旅费',
+          content: <TravelExpense {...formProps} />,
+          onOk: () => {
+            dispatch({
+              type: executionModelName + '/onSelectExpenseOk',
+              payload: {setFieldsValue, record}
+            })
+          },
+          style: "width:550px !important;height:300px !important;",
+        }
+      });
+    }
+  } // end of handleProjectNameClick()
+
+} // end of class
+
+export default ExecutionSection;

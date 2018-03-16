@@ -1,0 +1,43 @@
+import { Row, Col } from 'antd';
+
+import OptionsForm from './OptionsForm';
+import ListView from './ListView';
+//取得模型名称
+import modelDefinition from './model';
+const modelName = modelDefinition.namespace;
+
+class Report extends React.Component {
+  componentDidMount() {
+   //解构参数
+    const {
+      dispatch,
+    } = this.props;
+    //初始化选项数据
+    dispatch({ type: 'indicator_report/initialize',payload:{}});
+  }
+
+  render() {
+    const props=this.props;
+    const {
+      match,
+      dispatch,
+      conditionData,
+      yearOptions,
+      deptOptions,
+      statData,
+    } = props;
+
+    return (
+      <div>
+        <OptionsForm />
+        <ListView />
+      </div>
+    )
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({indicator_report,loading, apptabs:{tabs}}) =>
+  ({indicator_report,loading: loading.models[modelName], tabs})
+)(Report);

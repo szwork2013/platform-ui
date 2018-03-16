@@ -1,0 +1,98 @@
+import service from 'service';
+import wfservice from 'wfservice';
+
+const modelName = 'payments';
+
+const model =  {
+  namespace: modelName,
+  state: {
+  },
+  reducers: {
+  }, // end of reducers
+
+  effects: {
+    // 请求选项数据消息
+    *setPayments({payload}, {call, put,select}) {
+      let namespace = 'expenditure_payments';
+      const paymenstModel = yield select(state=>state[namespace]);
+
+      //结构参数
+      let { record,searchParam,href }=payload;
+
+      //1 调用服务获取选项数据
+      let newSearchParam = service.autoConfigSearchParam({searchParam, state:paymenstModel});
+
+      const result = yield call(service.queryPage,namespace,newSearchParam);
+      if (!result) return; //出错了
+
+      //2 构造选项数据
+      let dataResult = service.parseRestResult(result);
+      record.payments=dataResult.list;
+
+      // let recordHref=service.parseRecordUrl(record);
+      // for(let i=0;i<record.payments.length;i++){
+      //   let item=record.payments[i];
+      //   //找数组中就不是支付自己的数据，找到就设置意见栏信息
+      //   if(recordHref!=service.parseRecordUrl(item)){
+      //     //如果需要工作流，则请求待办列表
+      //     if (wfservice.getInstanceId(item)) {
+      //       const todoList = yield call(wfservice.requestSelfTodoList,
+      //         namespace, item);
+      //       wfservice.setTodoListAndInstanceId(item, todoList);
+      //     }
+      //   }else{
+      //     break;
+      //   }
+      // }
+
+      //调用接口更新tab的model
+      yield put ({
+        type:'apptabs/updateTab',
+        payload: {
+          key: href,
+          model: {record, state: {
+            origin: Object.assign(record)
+          }}
+        },
+      });
+    },
+
+    // 请求选项数据消息
+    *setTodosInPayment({payload}, {call, put,select}) {
+      //结构参数
+      let { record,link,href }=payload;
+
+      if(!record.payments||!Array.isArray(record.payments)) return;
+
+      for(let i=0;i<record.payments.length;i++){
+        let item=record.payments[i];
+        //找数组中就不是支付自己的数据，找到就设置意见栏信息
+        if(link==service.parseRecordUrl(item)){
+          //如果需要工作流，则请求待办列表
+          if (wfservice.getInstanceId(item)) {
+            const todoList = yield call(wfservice.requestSelfTodoList,
+              'expenditure_payments', item);
+            wfservice.setTodoListAndInstanceId(item, todoList);
+          }
+        }
+      }
+
+      //调用接口更新tab的model
+      yield put ({
+        type:'apptabs/updateTab',
+        payload: {
+          key: href,
+          model: {record, state: {
+            origin: Object.assign(record)
+          }}
+        },
+      });
+    },
+
+  }, // end of effects
+
+  subscriptions: {
+  }
+};
+
+export default model;

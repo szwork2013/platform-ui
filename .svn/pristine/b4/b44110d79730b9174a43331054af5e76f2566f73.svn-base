@@ -1,0 +1,26 @@
+import {Card, Col, Row} from 'antd';
+import History from './History';
+import WorkFlowForm from './WorkFlowForm';
+
+//权限定义表单
+const EmbeddedForm = (props) => {
+	//显示UI
+	return (
+    <div style={{padding: '1px'}}>
+      <Row gutter={16}>
+        <Col span={10}>
+          <Card title="任务信息" bordered={false} bodyStyle={{marginTop:'-30px'}}>
+            <WorkFlowForm {...props} key ={1}/> 
+          </Card>
+        </Col>
+        <Col span={14} >
+          <Card title="反馈信息" bordered={false} bodyStyle={{padding: '1px', marginTop:'-30px'}}>
+            <History {...props}/>
+          </Card>
+        </Col>
+      </Row>
+    </div>
+	);
+}
+
+export default EmbeddedForm;

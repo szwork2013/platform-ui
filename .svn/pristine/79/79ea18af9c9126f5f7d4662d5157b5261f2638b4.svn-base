@@ -1,0 +1,361 @@
+import React from 'react';
+import { connect } from 'dva';
+import { ModuleLayout } from 'components';
+
+const menuItems = [
+  {
+    path: 'consumable',
+    icon: 'folder',
+    title: 'IT耗材需求计划',
+    //expanded: true,
+    children: [
+      {
+        path: 'company',
+        icon: 'calendar',
+        title: '公司需求计划'
+      },
+      {
+        path: 'alldepartment',
+        icon: 'schedule',
+        title: '所有部门需求计划'
+      },
+      {
+        path: 'department',
+        icon: 'schedule',
+        title: '本部门需求计划'
+      },
+      {
+        path: 'units',
+        icon: 'schedule',
+        title: '二级单位需求计划'
+      },
+      {
+        path: 'materialsearch',
+        icon: 'search',
+        title: '耗材查询'
+      },
+      {
+        path: 'materialsetting',
+        icon: 'setting',
+        title: '选项配置',
+        expanded: true,
+        children: [
+          {
+            path: 'materialimport',
+            icon: 'export',
+            title: '导入耗材目录',
+          }
+        ]
+      },
+    ]
+  },
+  {
+    path: 'officeequipment',
+    icon: 'folder',
+    title: 'IT办公设备需求计划',
+    children: [
+      {
+        path: 'company',
+        icon: 'calendar',
+        title: '公司需求计划'
+      },
+      {
+        path: 'alldepartment',
+        icon: 'schedule',
+        title: '所有部门需求计划'
+      },
+      {
+        path: 'department',
+        icon: 'schedule',
+        title: '部门需求计划'
+      },
+      {
+        path: 'materialmanagement',
+        icon: 'setting',
+        title: '配置管理',
+        expanded: true,
+        children: [
+          {
+            path: 'catalogue',
+            icon: 'export',
+            title: 'IT办公设备目录 ',
+          }, {
+            path: 'equipmentimport',
+            icon: 'export',
+            title: '导入IT设备目录  ',
+          }
+        ]
+      },
+    ]
+  },
+  {
+    path: 'uninstallequipment',
+    icon: 'folder',
+    title: '非安设备需求计划',
+    children: [
+      {
+        path: 'company',
+        icon: 'calendar',
+        title: '公司需求计划'
+      },
+      {
+        path: 'alldepartment',
+        icon: 'schedule',
+        title: '所有部门需求计划'
+      },
+      {
+        path: 'units',
+        icon: 'schedule',
+        title: '二级单位需求计划'
+      },
+      {
+        path: 'department',
+        icon: 'schedule',
+        title: '部门需求计划'
+      },
+      {
+        path: 'materialsetting',
+        icon: 'setting',
+        title: '选项配置',
+        expanded: true,
+        children: [
+          {
+            path: 'category',
+            icon: 'export',
+            title: '设备分类信息  ',
+          }, {
+            path: 'equipmentinformation',
+            icon: 'export',
+            title: '设备基本信息   ',
+          }, {
+            path: 'equipmentimport',
+            icon: 'export',
+            title: '导入非安设备信息    ',
+          }
+        ]
+      },
+    ]
+  },
+  {
+    path: 'itproduceequipment',
+    icon: 'folder',
+    title: 'IT生产设备需求计划',
+    children: [
+      {
+        path: 'units',
+        icon: 'schedule',
+        title: '二级单位需求计划'
+      },
+      {
+        path: 'materialsetting',
+        icon: 'setting',
+        title: '选项配置',
+        expanded: true,
+        children: [
+          {
+            path: 'category',
+            icon: 'export',
+            title: '商品分类表   ',
+          }, {
+            path: 'equipmentinformation',
+            icon: 'export',
+            title: 'IT生产设备基本信息   ',
+          }, {
+            path: 'equipmentimport',
+            icon: 'export',
+            title: '导入IT生产设备信息     ',
+          }
+        ]
+      },
+    ]
+  },
+  {
+    path: 'engineermaterial',
+    icon: 'folder',
+    title: '工程物资需求计划',
+    children: [
+      {
+        path: 'company',
+        icon: 'calendar',
+        title: '公司需求计划'
+      },
+      {
+        path: 'alldepartment',
+        icon: 'schedule',
+        title: '所有部门需求计划'
+      },
+      {
+        path: 'department',
+        icon: 'schedule',
+        title: '部门需求计划'
+      },
+      {
+        path: 'materialsetting',
+        icon: 'setting',
+        title: '选项配置',
+        expanded: true,
+        children: [
+          {
+            path: 'engineermaterialcategory',
+            icon: 'export',
+            title: '工程物资分类信息   ',
+          }, {
+            path: 'engineermaterialinformation',
+            icon: 'export',
+            title: '工程物资基本信息    ',
+          }, {
+            path: 'engineermaterialimport',
+            icon: 'export',
+            title: '导入工程物资信息     ',
+          }
+        ]
+      },
+    ]
+  },
+  {
+    path: 'officesupplies',
+    icon: 'folder',
+    title: '办公用品需求计划',
+    children: [
+      {
+        path: 'company',
+        icon: 'calendar',
+        title: '公司需求计划'
+      },
+      {
+        path: 'alldepartment',
+        icon: 'schedule',
+        title: '所有部门需求计划'
+      },
+      {
+        path: 'units',
+        icon: 'schedule',
+        title: '二级单位需求计划'
+      },
+      {
+        path: 'department',
+        icon: 'schedule',
+        title: '部门需求计划'
+      },
+      {
+        path: 'materialsetting',
+        icon: 'setting',
+        title: '选项配置',
+        expanded: true,
+        children: [
+          {
+            path: 'officesuppliescategory',
+            icon: 'export',
+            title: '用品分类信息',
+          }, {
+            path: 'officesuppliesCatalogue',
+            icon: 'export',
+            title: '办公用品目录',
+          }, {
+            path: 'officesuppliesimport',
+            icon: 'export',
+            title: '导入办公用品目录',
+          }, {
+            path: 'supplier',
+            icon: 'smile-o',
+            title: '供应商',
+          }
+        ]
+      },
+    ]
+  },
+  {
+    path: 'purchase',
+    icon: 'folder',
+    title: '物资采购计划',
+    children: [
+      {
+        path: 'itmaterial',
+        icon: 'printer',
+        title: 'IT耗材',
+      },
+      {
+        path: 'unitsmaterial',
+        icon: 'printer',
+        title: '二级单位IT耗材',
+      },
+      {
+        path: 'itofficeequipment',
+        icon: 'desktop',
+        title: 'IT办公设备',
+      },
+      {
+        path: 'untilitofficeequipment',
+        icon: 'edit',
+        title: '二级单位IT生产设备',
+      },
+      {
+        path: 'officesupplies',
+        icon: 'edit',
+        title: '办公用品',
+      },
+      {
+        path: 'untilofficesupplies',
+        icon: 'edit',
+        title: '二级单位办公用品',
+      },
+      {
+        path: 'engineermaterial',
+        icon: 'folder',
+        title: '工程物资',
+        children: [
+          {
+            path: 'hasnotpurchase',
+            icon: 'file-text',
+            title: '未纳入采购的需求计划',
+          },
+          {
+            path: 'haspurchase',
+            icon: 'file-text',
+            title: ' 已纳入采购的需求计划',
+          },
+          {
+            path: 'engineermaterial',
+            icon: 'file-text',
+            title: '工程物资采购计划',
+          }
+        ]
+      },
+      {
+        path: 'uninstallequipment',
+        icon: 'check',
+        title: '非安设备',
+      },
+      {
+        path: 'unitsuninstallequipment',
+        icon: 'check',
+        title: '二级单位非安设备',
+      },
+      {
+        path: 'materialsetting',
+        icon: 'folder',
+        title: '选项配置',
+        children: [
+          {
+            path: 'supplier',
+            icon: 'smile-o',
+            title: '供应商 ',
+          }
+        ]
+      },
+    ]
+  },
+  {
+    path: 'supplier',
+    icon: 'smile-o',
+    title: '供应商',
+  }
+];
+
+const Layout = (props) => {
+  return (
+    <ModuleLayout trigger siderTitle='物资' siderIcon='book' menu={menuItems} {...props} />
+  )
+}
+
+export default Layout;

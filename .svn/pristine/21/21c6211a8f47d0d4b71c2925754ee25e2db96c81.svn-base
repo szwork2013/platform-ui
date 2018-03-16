@@ -1,0 +1,57 @@
+import React from 'react'
+import PropTypes from 'prop-types'
+
+import {Redirect, Route, Switch} from 'dva/router';
+import dynamic from 'dva/dynamic';
+import Layout from './Layout';
+import {modelRegister} from 'utils';
+
+// import itemModel from './config/item/model'; modelRegister(itemModel); 模块路由
+const mainRoute = (props) => {
+  const {match} = props;
+
+  //动态加载路由
+
+  const annualdemandCompanyRoute = dynamic({
+    app,
+    component: () => import ('./annualdemand/company')
+  });
+
+  const annualdemandUnitRoute = dynamic({
+    app,
+    component: () => import ('./annualdemand/unit')
+  });
+
+  const annualdemandCantonalRoute = dynamic({
+    app,
+    component: () => import ('./annualdemand/cantonal')
+  });
+
+  const rootPath = match.path;
+  return (
+    <Layout {...props}>
+      <Switch>
+        <Redirect
+          exact
+          from={rootPath}
+          to={rootPath + '/annualdemand/company'}
+          push={true}/>
+        <Route
+          path={rootPath + '/annualdemand/company'}
+          component={annualdemandCompanyRoute}/>
+        <Route
+          path={rootPath + '/annualdemand/company'}
+          component={annualdemandUnitRoute}/>
+        <Route
+          path={rootPath + '/annualdemand/cantonal'}
+          component={annualdemandCantonalRoute}/>
+      </Switch>
+    </Layout>
+  )
+}
+
+mainRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default mainRoute;

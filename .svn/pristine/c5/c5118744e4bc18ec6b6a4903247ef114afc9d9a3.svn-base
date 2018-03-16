@@ -1,0 +1,90 @@
+import React from 'react';
+import { Collapse, Tabs, Icon, Badge, Button } from 'antd';
+const Panel = Collapse.Panel;
+const TabPane = Tabs.TabPane;
+
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+
+import service from 'service';
+import wfservice from 'wfservice';
+
+import TitleSection from '../../../../material/common/TitleSection';
+import Item from '../item';
+
+//权限定义表单
+class GradeTargetForm extends React.Component {
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      activeKey: '1',
+    };
+  }
+
+  componentDidMount() {
+  }
+
+  render() {
+    //解构参数
+    let {
+    model, //FormContainer注入：模型
+      canEdit = true, //FormContainer注入：是否可编辑
+      getFieldDecorator,
+      setFieldsValue,
+      dispatch,
+      formCanEdit,
+      ...rest
+  } = this.props;
+    let { record } = model;
+
+
+    canEdit = canEdit ? formCanEdit : false;
+    //构造FormItem的公共参数
+    const itemProps = {
+      canEdit, required: canEdit,
+      getFieldDecorator, setFieldsValue,
+    };
+    const itemWidth = ['48%', '20%', '80%'];
+
+    let activeKey = this.state.activeKey;
+    if (record._isComment)
+      activeKey = '2';
+    //显示UI
+    return (
+      <Tabs tabPosition='top' activeKey={activeKey}
+        onChange={(activeKey) => { this.setState({ activeKey }); record._isComment = false; }}>
+        <TabPane tab={<span><Icon type="folder" />表单信息</span>} key="1">
+          <Form layout='inline'>
+            <TitleSection title={'政务信息部门评分指标审批单'} />
+            <Row>
+            <FormItem type='InputNumber' {...itemProps} width={itemWidth}
+                      title='年度' itemKey='year' initialValue={record.year}
+                      placeholder=''  min={1900} max={9999}
+            />
+            <FormItem type='Input' {...itemProps} title='备注' width={itemWidth}
+                      itemKey='remark' initialValue={record.remark} required={false}
+            />
+            </Row>
+            <Item record={record} canEdit={canEdit}/>
+          </Form>
+        </TabPane>
+        <TabPane key="2"
+          tab={<span><Icon type="file-text" />批阅意见</span>}
+        >
+          <Form layout='inline'>
+            <Row>
+              <FormItem type='CommentView' {...itemProps} width={itemWidth}
+                commentColumns={wfservice.getCommentColumns(record)}
+              />
+            </Row>
+          </Form>
+        </TabPane>
+      </Tabs>
+    );
+  }
+
+}
+export default GradeTargetForm;

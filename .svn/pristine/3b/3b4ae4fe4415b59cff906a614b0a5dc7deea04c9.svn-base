@@ -1,0 +1,85 @@
+import React from 'react'
+import PropTypes from 'prop-types'
+
+import {Redirect, Route, Switch} from 'dva/router';
+import dynamic from 'dva/dynamic';
+import Layout from './Layout';
+
+import service from 'service';
+
+//模块路由
+const mainRoute = (props) => {
+  const {
+    match,
+  } = props;
+
+  //动态加载路由
+  const draftFormRoute = dynamic({
+    app,
+    component: () => import('../expenditure/draftform')
+  });
+  const modifyFormRoute = dynamic({ //2017-12-04 zyk 数据补录
+    app,
+    component: () => import('../expenditure/modifyform')
+  });
+const operatingGuideRoute = dynamic({ //2017-12-04 zyk 操作指引
+    app,
+    component: () => import('../operatingguide')
+  });  
+  const queryFormRoute = dynamic({
+    app,
+    component: () => import('../expenditure/queryform')
+  });
+  const excutionRoute = dynamic({
+    app,
+    component: () => import('../expenditure/execution')
+  });
+  const paymentRoute = dynamic({
+    app,
+    component: () => import('../expenditure/payment')
+  });
+  const allPaymentRoute = dynamic({
+    app,
+    component: () => import('../expenditure/payment/View/AllPaymentView')
+  });
+  const todoLinkRoute = dynamic({
+    app,
+    component: () => import('../todo/todolink')
+  });
+
+  const doneLinkRoute = dynamic({
+    app,
+    component: () => import('../todo/donelink')
+  });
+  const statFormRoute = dynamic({
+    app,
+    component: () => import('../expenditure/statform')
+  });
+
+  const rootPath = match.path;
+  return (
+    <Layout {...props}>
+      <Switch>
+        <Redirect exact from={rootPath} to={rootPath + '/todo/todolink'} push={true}/>
+        <Route path={rootPath + '/todo/todolink'} component={todoLinkRoute}/>
+        <Route path={rootPath + '/todo/donelink'} component={doneLinkRoute}/>
+        <Route path={rootPath + '/expenditure/draftform/:expenditureType'} component={draftFormRoute}/>
+        <Route path={rootPath + '/expenditure/modifyform/:expenditureType'} component={modifyFormRoute}/> 
+        <Route path={rootPath+'/operatingguide'} component={operatingGuideRoute} />        
+        <Route path={rootPath + '/search/expenditure/queryform'} component={queryFormRoute} />
+        <Route path={rootPath + '/search/expenditure/execution/my'} component={excutionRoute}/>
+        <Route path={rootPath + '/search/expenditure/payment/my'} component={paymentRoute}/>
+        {service.authz('expenditure.admin') &&
+        <Route path={rootPath + '/search/expenditure/payment/all'} component={allPaymentRoute}/>
+        }
+        <Route path={rootPath + '/expenditure/stat/:expenditureType'} component={statFormRoute} />        
+      </Switch>
+    </Layout>
+  )
+}
+
+mainRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default mainRoute;

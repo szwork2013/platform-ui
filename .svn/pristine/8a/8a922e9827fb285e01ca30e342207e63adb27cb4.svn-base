@@ -1,0 +1,238 @@
+import { Form as FormLayout, FormItem } from 'components';
+import service from 'service';
+import wfservice from 'wfservice';
+
+import {
+  StyledHeaderDiv,
+} from './styled';
+import {
+  StyledTable as Table,
+  StyledTr as Row,
+  StyledLabelTd as LabelCol,
+  StyledTd as Col,
+} from '../../../styled';
+
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+//const Row = FormContainer.StyledRow;
+
+//权限定义表单
+const EmbeddedForm = (props) => {
+	//解构参数
+	let {
+    model, //Form注入：模型
+    canEdit = true, //Form注入：是否可编辑
+    getFieldDecorator,
+    setFieldsValue,
+    getFieldValue,
+    formCanEdit,
+    dispatch
+	} = props;
+
+  const { record } = model;
+
+  //获取创建人
+  let creator = service.getRecordLinkAttr(record,'createdBy');
+  let creatorOrgId = undefined;
+  //获取创建人所属机构id
+  if(creator){
+    creatorOrgId = creator.orgId;
+  }
+  //如果没有创建人，则创建人是当前登陆人
+  if(!creatorOrgId){
+    creatorOrgId=service.userInfo.user.org.id;
+  }
+
+  //构造FormItem的公共参数
+  const itemProps = { canEdit:formCanEdit, getFieldDecorator,setFieldsValue,getFieldValue};
+  const oneItemWidth = ['96%','10%','90%'];
+  const twoItemWidth = ['48%', '20%', '80%'];
+  const threeItemWidth = ['32%', '30%', '70%'];
+  const fourItemWidth = ['24%', '40%', '60%'];
+  //item宽度样式
+  const itemWidth = ['100%','0%','100%'];
+  const user = service.userInfo.user;
+
+  //1构造车辆选项的搜索参数
+  const carsSearchParam= { //搜索条件.
+    filter: { //过滤规则
+      clazz: 'Car', //模型对应的后台实体类
+      jpql:creatorOrgId ? 'select o from Car o LEFT JOIN o.orgs org where (o.isUsing=false or o.isUsing=null) and org.id='+creatorOrgId:
+        'select o from Car o LEFT JOIN o.orgs org where o.isUsing=false or o.isUsing=null',
+    },
+    size: 1000, //指定每页记录数
+  };
+
+   //2构造驾驶员选项的搜索参数
+  const driversSearchParam= { //搜索条件
+    filter: { //过滤规则
+      clazz: 'SysUser', //模型对应的后台实体类
+      jpql: user.orgFullName.indexOf('发电有限公司')!=-1?'select o from SysUser o LEFT JOIN o.roles r where r.name like \'%驾驶员风电场%\' and o.org.id='+creatorOrgId:
+        'select o from SysUser o LEFT JOIN o.roles r where r.name like \'%驾驶员总部%\'',
+    },
+    size: 1000, //指定每页记录数
+    sort: 'o.sortNo,asc' //缺省排序规则
+  };
+
+  //3构造用车人选项的搜索参数
+  const usersSearchParam= { //搜索条件
+    filter: { //过滤规则
+      where: `o.org.id='${user.org.id}'`, //条件
+    },
+    size: 1000, //指定每页记录数
+    sort: 'o.sortNo,asc' //缺省排序规则
+  };
+
+  let carAndDriverEdit=wfservice.authz(record,['carOrDriverEdite'])||(service.authz('vehickeEdit.admin')&&formCanEdit);
+  let vktEdit=service.authz('vehickeEdit.admin')||formCanEdit;
+
+	//显示UI
+	return (
+    <Form layout='inline'>
+      <StyledHeaderDiv>新能源云南分公司用车申请</StyledHeaderDiv>
+      <Table>
+        <Row>
+          <LabelCol>用车人</LabelCol>
+          <Col colSpan={4}>
+            <FormItem type='Select' {...itemProps} width={itemWidth}
+              title='用车人' itemKey='users' labelKey='name' multiple tags valueKey="name"
+              modelName='users' searchParam={usersSearchParam} initialValue={record.users||service.userInfo.user.name}
+            />
+          </Col>
+          <LabelCol>用车人数</LabelCol>
+          <Col colSpan={2}>
+            <FormItem type='InputNumber' {...itemProps} width={itemWidth}
+              title='用车人数' itemKey='numberOfUser' initialValue={record.numberOfUser}
+            />
+          </Col>
+          <LabelCol>前往地点</LabelCol>
+          <Col colSpan={6}>
+            <FormItem type='Input' {...itemProps} width={itemWidth}
+              title='前往地点' itemKey='destination' initialValue={record.destination}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>乘车时间</LabelCol>
+          <Col colSpan={5}>
+            <FormItem type='DatePicker' {...itemProps} width={itemWidth}
+              title='乘车时间' showTime itemKey='rideTime' initialValue={record.rideTime}
+            />
+          </Col>
+          <LabelCol>乘车地点</LabelCol>
+          <Col colSpan={5}>
+            <FormItem type='Input' {...itemProps} width={itemWidth}
+              title='乘车地点' itemKey='entruckingPoint' initialValue={record.entruckingPoint}
+            />
+          </Col>
+          <LabelCol>里程数</LabelCol>
+
+          <Col colSpan={2}>
+            <FormItem type='InputNumber' {...itemProps} width={itemWidth}
+              title='里程数' itemKey='vkt' initialValue={record.vkt}  canEdit={vktEdit}
+            />
+          </Col>
+
+        </Row>
+        <Row>
+          <LabelCol>使用开始时间</LabelCol>
+          <Col colSpan={6}>
+            <FormItem type='DatePicker' {...itemProps} width={itemWidth}
+              title='使用时间' showTime itemKey='startTime' initialValue={record.startTime}
+            />
+          </Col>
+          <LabelCol>使用结束时间</LabelCol>
+          <Col colSpan={6}>
+            <FormItem type='DatePicker' {...itemProps} width={itemWidth}
+              title='使用结束时间' showTime itemKey='endTime' initialValue={record.endTime}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>用车事由</LabelCol>
+          <Col colSpan={24}>
+            <FormItem type='TextArea' {...itemProps} width={itemWidth}
+              title='用车事由' itemKey='reason' initialValue={record.reason}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>备注</LabelCol>
+          <Col colSpan={24}>
+            <FormItem type='TextArea' {...itemProps} width={itemWidth}
+              title='备注' itemKey='remarks' initialValue={record.remarks} required={false}
+            />
+          </Col>
+        </Row>
+
+        {carAndDriverEdit&&
+        <Row>
+          <LabelCol>安排车辆</LabelCol>
+          <Col colSpan={6}>
+            <FormItem type='Select' {...itemProps} width={itemWidth}
+              title='安排车辆' itemKey='car' initialValue={record.car}
+              modelName='car_cars' labelKey='licensePlate' searchParam={carsSearchParam}
+                      canEdit={carAndDriverEdit}
+            />
+          </Col>
+          <LabelCol>安排驾驶员</LabelCol>
+          <Col colSpan={6}>
+            <FormItem type='Select' {...itemProps} width={itemWidth}
+              title='安排驾驶员' itemKey='driver' initialValue={record.driver}
+              modelName='users' searchParam={driversSearchParam}
+                      canEdit={carAndDriverEdit}
+            />
+          </Col>
+        </Row>
+        }
+
+        {!carAndDriverEdit&&
+        <Row>
+          <LabelCol>安排车辆</LabelCol>
+          <Col colSpan={6}>
+            <FormItem type='Input' {...itemProps} width={itemWidth}
+              title='安排车辆' itemKey='carLicensePlate' initialValue={record.carLicensePlate}
+                      canEdit={false} required={false}
+            />
+          </Col>
+          <LabelCol>安排驾驶员</LabelCol>
+          <Col colSpan={6}>
+            <FormItem type='Input' {...itemProps} width={itemWidth}
+              title='安排驾驶员' itemKey='driverName' initialValue={record.driverName}
+                      canEdit={false} required={false}
+            />
+          </Col>
+        </Row>
+        }
+        <Row>
+            <LabelCol>部门意见</LabelCol>
+            <Col colSpan={24}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                title='部门意见' comments={wfservice.getComments(record,"apartComment")}
+              />
+            </Col>
+          </Row>
+         { service.getRecordLinkAttr(record,'createdBy')&&service.getRecordLinkAttr(record,'createdBy').orgFullName.indexOf('发电有限公司')==-1 &&
+          <Row>
+            <LabelCol>综合部意见</LabelCol>
+            <Col colSpan={24}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                title='综合部意见' comments={wfservice.getComments(record,"zongHeBuComment")}
+              />
+            </Col>
+          </Row>
+         }
+          <Row>
+            <LabelCol>车队意见</LabelCol>
+            <Col colSpan={24}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                title='车队意见' comments={wfservice.getComments(record,"carComment")}
+              />
+            </Col>
+          </Row>
+      </Table>
+    </Form>
+	);
+}
+
+export default EmbeddedForm;

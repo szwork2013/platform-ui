@@ -1,0 +1,42 @@
+
+import { modelTemplate, config } from 'utils';
+import Form from './Form';
+import service from 'service';
+const { serverPath } = config; //取得RESTful api配置信息
+let deptId = undefined;
+if (service.userInfo) {
+  deptId = service.userInfo.user.org.id;
+}
+//权限模型定义
+const namespace = {
+  name: 'indicator_category', //模型的命名空间
+  title: '分类', //模型的名称
+  clazz: 'IndicatorCategory', //模型对应的后台实体类
+  linkAttrs: ['dept','parent'],
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    size: 20, //指定每页记录数
+    sort: 'o.dept,asc',//缺省排序规则
+    filter: {
+    },
+  },
+  form: Form, //使用的表单
+  titleRender: (record) => !record.name ? '新指标' :'指标：'+record.name,
+  effects:{
+    //获取当前登陆人的指标代办数目
+    * fetchIndicatorTodo({payload}, {call, put, select}) {
+      let url = `${serverPath}/indicator_category/getTodoCount`;
+      let todoCount = yield call(service.httprequest,url);
+      yield put({
+        type:"save",
+        payload:{
+          todoCount:todoCount
+        }
+      });
+    }
+  }
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

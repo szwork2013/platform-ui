@@ -1,0 +1,75 @@
+import React from 'react'
+import PropTypes from 'prop-types'
+import { Col, Icon, Modal,Button } from 'antd'
+import SendeePanel from '../../SendeePanel'
+import {connect} from 'dva'
+import {StyledRow} from './styled'
+
+const SendeeConfirmModal = (props) => {
+  const {
+    dispatch,
+    modalVisible,
+    selectedSendee,
+    action,
+    extraData,
+    callback,
+  } = props
+
+  //当没有可选人员时出现在底部的取消按钮
+  let footerProps={};
+  if(selectedSendee&&selectedSendee.length==0)
+    footerProps.footer=<Button onClick={()=>{
+      dispatch({
+        type: 'sendeeAuto/hide',
+      })}}>取消</Button>;
+
+
+  const modalProps = {
+      ...footerProps,
+    title: <div><Icon type="user"/>是否确认发送给</div>,
+    visible: modalVisible,
+    maskClosable: false,
+    width: '300px',
+    wrapClassName: 'vertical-center-modal',
+    onOk() {
+      if (callback && typeof callback === "function") {
+        callback(selectedSendee,action,extraData);
+      }
+      dispatch({
+        type: 'sendeeAuto/hide',
+      })
+    },
+    onCancel() {
+      dispatch({
+        type: 'sendeeAuto/hide',
+      })
+    },
+    afterClose() {
+      dispatch({
+        type: 'sendeeAuto/reset',
+      })
+    }
+  }
+
+
+  return (
+    <Modal {...modalProps}>
+      <StyledRow>
+        <Col span={24}>
+          <SendeePanel selectedSendee={selectedSendee} closeAble={false}/>
+        </Col>
+      </StyledRow>
+    </Modal>
+  )
+}
+
+SendeeConfirmModal.propTypes = {
+  callBack: PropTypes.func,
+}
+
+export default connect(({sendeeAuto: {modalVisible, selectedSendee,action,extraData}}) => ({
+  modalVisible,
+  selectedSendee,
+  action,
+  extraData
+}))(SendeeConfirmModal);

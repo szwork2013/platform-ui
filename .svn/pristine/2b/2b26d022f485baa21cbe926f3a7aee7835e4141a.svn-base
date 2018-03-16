@@ -1,0 +1,16 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+//权限模型定义
+const namespace = {
+  name: 'users',
+  title:'用户',
+  clazz: 'SysUser',
+  linkAttrs: ['org', 'roles'],
+};
+
+const modelParam = {
+  form: Form //使用的表单
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

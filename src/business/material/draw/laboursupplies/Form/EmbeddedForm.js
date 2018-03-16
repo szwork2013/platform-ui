@@ -1,0 +1,128 @@
+import React from 'react';
+import {Collapse, Tabs, Icon, Badge,Button} from 'antd';
+const Panel = Collapse.Panel;
+const TabPane = Tabs.TabPane;
+
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+
+import service from 'service';
+import wfservice from 'wfservice';
+import materialService from '../../../server';
+
+import TitleSection from '../../../common/TitleSection';
+import DrawContent from '../../common/DrawContent';
+import DrawItems from '../../common/DrawItems';
+
+//权限定义表单
+class MaterialDrawForm extends React.Component{
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      activeKey: '1',
+    };
+  }
+
+  componentDidMount() {
+  }
+
+  render(){
+  //解构参数
+  let {
+    model, //FormContainer注入：模型
+    canEdit = true, //FormContainer注入：是否可编辑
+    getFieldDecorator,
+    setFieldsValue,
+    dispatch,
+    formCanEdit,
+    ...rest
+  } = this.props;
+  let { record, state } = model;
+
+  //设置初始数据
+    if (state.mode == 'new') {
+      if(!record.year)
+        record.year = new Date().getFullYear();
+      if(!record.month)
+        record.month = new Date().getMonth() + 1;
+      if(!record.quarter)
+      record.quarter=Math.ceil(( new Date().getMonth() + 1)/3)
+    }
+
+
+    canEdit=canEdit?formCanEdit:false;
+    //构造FormItem的公共参数
+    const itemProps = { canEdit, required: canEdit,
+      getFieldDecorator, setFieldsValue,
+    };
+    const itemWidth = ['96%','10%','90%'];
+
+
+    //处理现实部门的信息
+    const user = service.userInfo.user;
+    let org=service.getRecordLinkAttr(record,'org');
+    record.orgName=(org&&org.orgName)||user.org.orgName;
+
+    let contentProp={record,canEdit,getFieldDecorator,setFieldsValue,dispatch};
+    let drawItemsProp={
+      record,
+      canEdit,
+      dispatch,
+      mode:state.mode}
+
+    let activeKey=this.state.activeKey;
+    if(record._isComment)
+      activeKey='2';
+    let typeString=materialService.convertTypeToString(record.type);
+//显示UI
+  return (
+    <Tabs tabPosition='top'   activeKey={activeKey}
+          onChange={(activeKey)=>{this.setState({ activeKey });record._isComment=false;}}>
+      <TabPane tab={<span><Icon type="folder"/>表单</span>} key="1">
+      <Form layout='inline'>
+        <div style={{display:'none'}}>
+          <FormItem type='Input' {...itemProps}
+                    title='物资类型' itemKey='type' initialValue={record.type||6}
+          />
+          <FormItem type='Input' {...itemProps}
+                    title='机构' itemKey='org'
+                    initialValue={record.org||service.constructRecordUrl({ modelName: 'orgs', id: user.org.id })}
+          />
+        </div>
+        <TitleSection title={typeString+'物资领用审批单'}/>
+        <DrawContent {...contentProp}></DrawContent>
+        <DrawItems {...drawItemsProp} isEngineerSpec={true}/>
+      </Form>
+      </TabPane>
+      <TabPane  key="2"
+                tab={<span><Icon type="file-text"/>批阅意见</span>}
+      >
+        <Form layout='inline'>
+          <Row>
+            <FormItem type='CommentView' {...itemProps} width={itemWidth}
+                      commentColumns={wfservice.getCommentColumns(record)}
+            />
+          </Row>
+        </Form>
+      </TabPane>
+      <TabPane  key="3"
+                tab={<span><Icon type="star-o"/>附件</span>}
+      >
+        <Form layout='inline'>
+          <Row>
+              <FormItem title='附件' type='Attachment' {...itemProps}
+                        itemKey='_files' link={service.getHrefOfLinkAttr(record)} mode={state.mode}
+                        multiple  width={itemWidth}
+              />
+          </Row>
+        </Form>
+      </TabPane>
+    </Tabs>
+  );
+  }
+
+}
+export default MaterialDrawForm;

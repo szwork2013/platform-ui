@@ -1,0 +1,23 @@
+import styled from 'styled-components';
+import {Row} from 'antd'
+
+const theme = {}
+
+const StyledRow = styled(Row).attrs({
+  type: "flex",
+  gutter: 16,
+  justify: "space-between"
+})`
+  align-items:stretch
+`;
+
+const StyledA = styled.a`
+ 	margin-left: 11px;
+`;
+
+
+export {
+  StyledRow,
+  StyledA,
+  theme
+}

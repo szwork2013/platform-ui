@@ -1,0 +1,176 @@
+import {routerRedux} from 'dva/router';
+import {message} from 'antd';
+
+import axios from 'axios';
+
+import {EnumErrorCode} from 'enums';
+import service from 'service';
+
+let axiosInstance = undefined;
+
+export default function (url, options) {
+  if (!axiosInstance) {
+     axiosCreateInstance();
+  }
+  return request(url, options);
+}
+
+const request = (url, options = {}) => {
+  let {
+    method = 'get',
+    data = {}
+  } = options;
+
+  switch (method.toLowerCase()) {
+    case 'get':
+      let {sort, ...params} = data || {};
+      let getUrl = url;
+      if (sort && sort instanceof Array) {
+        //有排序参数sort且是数组，需要特殊处理，否则不能正确构造url
+        for (let item of sort) {
+          getUrl += getUrl.includes('?') ? '&' : '?';
+          getUrl += 'sort=' + item;
+        }
+      } else {
+        //sort参数不存在或者不是数组，则无需处理
+        params = data;
+      }
+
+      getUrl += getUrl.includes('?') ? '&' : '?';
+      getUrl += 'timestamp=' + new Date().getTime();
+      return axiosInstance.get(getUrl, {
+        params: params
+      })
+    case 'delete':
+      return axiosInstance.delete(url, {data});
+    case 'post':
+      return axiosInstance.post(url, data);
+    case 'put':
+      return axiosInstance.put(url, data);
+    case 'patch':
+      return axiosInstance.patch(url, data);
+    default:
+      return axiosInstance(options);
+  }
+}
+
+//创建axios实例
+function axiosCreateInstance() {
+   axiosInstance = axios.create({
+    timeout: 30 * 1000,//设置超时时间
+  });
+
+  //每次请求前设置请求头
+  axiosInstance.interceptors.request.use((config) => {
+    if (service.userInfo) { //如果已经登录，则在请求头中带上token
+      const token = service.userInfo.token;
+      if (token) {
+        if (!config.headers) config.headers = [];
+        config.headers[token.name] = token.value;
+      }
+    }
+    return config;
+  }, (err) => {
+    return Promise.reject(err);
+  });
+
+  //设置返回结果
+  axiosInstance.interceptors.response.use((response) => {
+    return checkError(response) ? Promise.resolve(null) : Promise.resolve(response.data);
+  }, (error) => {
+    if (error.code && error.code === "ECONNABORTED") {
+      message.error('请求超时,请重试！', 2);
+      return;
+    }
+
+    if (!error.response) {
+      message.error('认证已失效，需要重新登录！', 2);
+      redirectToLogin();
+      return;
+    }
+
+    checkError(error.response);
+  });
+  return axiosInstance;
+}
+
+//检测是否发生了错误
+
+function checkError(response) {
+  //读取错误代码和错误消息
+  const errorCode = response.data && response.data.errorCode || 0;
+  let errMessage = response.data && response.data.message || '';
+  if (errMessage instanceof Object) {
+    errMessage = JSON.stringify(errMessage);
+  }
+
+  errMessage = errMessage.toLowerCase();
+
+  if (errorCode === EnumErrorCode.NEED_PERMISSION) {
+    message.error('没有访问数据的权限！', 2);
+    return true;
+  }
+
+  if (errorCode === EnumErrorCode.LOGIN_FALED) {
+    message.error('登录失败，用户名或密码错误！', 2);
+    return true;
+  }
+
+  if (errorCode === EnumErrorCode.USER_ACCOUNT_LOCKED) {
+    message.error('登录失败，用户帐号已被锁定！', 2);
+    return true;
+  }
+
+  if (errorCode === EnumErrorCode.VALIDATION_FAILED) {
+    message.error('存在一个或多个需要填写的字段未正确填写！', 2);
+    return true;
+  }
+
+  if (errMessage.indexOf('parse') >= 0 &&
+    errMessage.indexOf('json') >= 0) {
+    message.error('存在一个或多个需要填写的字段未正确填写！', 2);
+    return true;
+  }
+
+  if (errMessage.indexOf('invalid') >= 0 &&
+    errMessage.indexOf('format') >= 0) {
+    message.error('存在一个或多个需要填写的字段未正确填写！', 2);
+    return true;
+  }
+
+
+  if (errMessage.indexOf('constraint') >= 0 &&
+    errMessage.indexOf('violation') >= 0) {
+    message.error('为了保持数据的完整性，此操作不能被执行！', 2);
+    return true;
+  }
+
+  if (errorCode === EnumErrorCode.NEED_AUTHENTICATION || errorCode === EnumErrorCode.SHIRO_ERROR || errorCode === EnumErrorCode.SESSION_OUT_OF_DATE) {
+    if (errorCode === EnumErrorCode.SESSION_OUT_OF_DATE) {
+      message.error('会话超时，需要重新登录！', 2);
+    } else {
+      message.error('认证已失效，需要重新登录！', 2);
+    }
+    redirectToLogin();
+    return true;
+  }
+
+  /**
+   * 业务异常
+   */
+  if (errorCode === EnumErrorCode.BUSINESS_ERROR) {
+    message.error(errMessage, 2);
+    return true;
+  }
+  return false;
+};
+
+function redirectToLogin() {
+  service.removeUserInfoFromLocal();
+  service.userInfo = null;
+  if (service.dispatch) {
+    service.dispatch(routerRedux.push({
+      pathname: '/login'
+    }));
+  }
+}

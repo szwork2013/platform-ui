@@ -1,0 +1,37 @@
+import {Form} from 'components'
+import {connect} from 'dva';
+
+const Layout = (props) => {
+  //按钮条配置
+  const actionBar = {
+    save: true, //显示保存按钮
+    saveAndClose: true, //显示保存并关闭按钮
+    edit: true, //显示编辑按钮
+    close: true, //显示关闭按钮
+  };
+
+  const {record, state} = props.model;
+
+  //表单配置
+  const embeddedForm = [
+    {row: 1, type: 'Input', title: '项目名称', key: 'name'},
+    {row: 2, type: 'InputNumber', title: '失效年度', key: 'endYear'},
+    {row: 4, type: 'TreeSelect', title: '所属机构', key: 'org',
+      labelKey: 'orgName', modelName: 'orgs',
+      searchParam: { //搜索条件
+        size: 1000, //指定每页记录数
+        sort: 'o.sortNo,asc', //缺省排序规则
+        filter: {},
+      },
+    }
+  ];
+
+  //显示UI
+  return (
+    <Form actionBar={actionBar} embeddedForm={embeddedForm} {...props} />
+  );
+}
+
+export default connect(({apptabs, loading}) =>
+  ({apptabs, loading: loading.models['expenditure_fundsource']})
+)(Layout);

@@ -1,0 +1,105 @@
+import { Button, Icon ,message} from 'antd'
+
+import { config } from 'utils';
+const { api } = config; //取得RESTful api配置信息
+
+import service from 'service';
+import {StyledUpload} from './styled'
+
+const Component = ( props ) => {
+  //解构参数
+  const {
+    model,
+    uid,
+    itemKey,
+    link,
+    buttonTitle = '上载文件', //上载按钮标题
+    disabled = true,  //是否可编辑
+    multiple=false,//是否多选
+    controlProps = {},//组件属性
+    dispatch,
+    searchParam,
+    layout,
+    setFieldsValue,
+  } = props;
+
+  if(disabled)
+    return null;
+
+  const data = model.data.find(
+    r => r.key == uid
+  );
+
+  const { rootPath } = api; //RESTful请求的根路径
+  let action='';
+  if(link)
+    action=rootPath+'/attachments/file?entityLink='+
+      service.parseEntityLink(link,true)+'&category='+(itemKey||'');
+
+  let componentProps={
+    name:'logo',
+    multiple,
+    disabled,
+    action:action ,
+    layout,
+    defaultFileList:[],
+    headers: {
+      xpnToken: service.userInfo.token.value,
+    },
+    onChange(info) {
+      if (info.file.status === 'done') {
+        //发消息刷新附件
+        dispatch({
+          type: 'attachments/query',
+          payload: {
+            uid,
+            searchParam,
+            setFieldsValue,
+          }
+        });
+        message.success(`${info.file.name} file uploaded successfully`);
+      } else if (info.file.status === 'error') {
+        message.error(`${info.file.name} file upload failed.`);
+      }
+    },
+    ...controlProps
+  };
+
+  //key 改变能够重新构建组件，重新设置defaultFileList，达到上传完毕，默认列表消失的目的。
+  let key='noData';
+  if(data&&data.list){
+    key=data.list.length;
+    if(!multiple){
+      if(data.list.length>=1){
+        return null;
+      }
+    }
+  }
+
+  //显示UI
+  return (
+    <StyledUpload  {...componentProps} key={key}>
+      <Button>
+        <Icon type="upload" />{buttonTitle}
+      </Button>
+    </StyledUpload>
+  );
+}
+
+import PropTypes from 'prop-types';
+Component.propTypes = {
+  uid: PropTypes.string.isRequired,
+  link: PropTypes.string,
+  buttonTitle: PropTypes.string,
+  itemKey: PropTypes.string,
+  disabled: PropTypes.bool,
+  searchParam:PropTypes.object,
+  controlProps: PropTypes.object,
+  layout: PropTypes.string,
+  onChange: PropTypes.func,
+}
+
+import {connect} from 'dva'
+export default  connect(({attachments}) =>
+  ({model: attachments})
+)(Component);

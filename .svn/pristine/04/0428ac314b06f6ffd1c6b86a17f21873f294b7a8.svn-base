@@ -1,0 +1,179 @@
+import moment from 'moment';
+
+import service from 'service';
+
+import { config} from 'utils';
+const { api } = config; //取得RESTful api配置信息
+
+//构造查询参数
+export const constructSearchParam = (conditionData) => {
+  if (!conditionData) return;
+
+  let where = '';
+
+  for(let attrName in conditionData){
+    if (attrName=='where' || attrName=='searchWhere') continue;
+    let attrValue = conditionData[attrName];
+    if (attrValue==-1 || attrValue=='') continue;
+    
+    let attrWhere = '';
+
+    if (attrName=='fundSource' && attrValue) { //资金来源
+      let id = conditionData.fundSource.id;
+      if (id) attrWhere='o.fundSource.id='+id;
+    } 
+    else if(attrName=='expenditureType'&&attrValue) { //资金属性
+      if (attrValue=='operating')
+        attrWhere="o.fundSource.type=0";
+      else if (attrValue=='infrastructure')
+        attrWhere="o.fundSource.type=1";        
+    }
+    else if(attrName=='subsidiary' && attrValue) { //公司
+      let id = attrValue.id;
+      attrWhere="o.fundSource.org.id="+id;
+    }
+    else if(attrName=='category' && attrValue) { //科目
+      if (!conditionData.expenditureType) continue;
+
+      let idList = attrValue.idList;
+      if (!idList) continue;
+      attrWhere='o.'+attrName+'.id in ('+idList.join(',')+')';
+    }
+    else if(attrName=='useDept' && attrValue) { //使用部门
+      let id = attrValue.id;
+      attrWhere="o.createdBy.org.id="+id;
+    }
+    else if(attrName=='startDate' && attrValue) { //开始日期
+      let date = moment(attrValue).format('YYYY-MM-DD');
+      attrWhere="o.createdTime >= '"+date+"'";
+    }
+    else if(attrName=='endDate' && attrValue) { //结束日期
+      let date = moment(attrValue).format('YYYY-MM-DD');
+      attrWhere="o.createdTime <= '"+date+"'";
+    }
+    else if(attrName=='state' && attrValue) { //审批状态
+      attrWhere="o.state in ("+attrValue.join(',')+")";
+    }
+    else if (attrValue) {
+      attrWhere+='o.'+attrName+'='+attrValue;
+    }
+
+    if (attrWhere && attrWhere!='')
+      where += where=='' ? attrWhere : ' and '+attrWhere;
+  }
+
+  return {
+    filter: { //过滤规则
+      where,
+    },
+    size: 100,
+    sort: ['categoryparentparentparent.sortNo,asc','categoryparentparent.sortNo,asc','categoryparent.sortNo,asc','category.sortNo,asc','o.projectNo,asc']
+  };
+}
+
+//统计符合条件的数据
+export const statForQuery = (conditionData) => {
+  const { rootPath } = api; //RESTful请求的根路径
+  const url = rootPath+'/expenditure_executions/stat/forquery';
+
+  let queryParam = constructQueryParam(conditionData);
+  return service.queryRecord(url, queryParam);
+}
+
+//构造条件数据构造查询参数
+export const constructQueryParam = (conditionData) => {
+  let queryParam = {};
+  if (!conditionData) return queryParam;
+
+  let searchParam = constructSearchParam(conditionData);
+
+  queryParam.where = searchParam.filter.where||'';
+  if (conditionData.where) {
+    queryParam.where+=(queryParam.where!='' ? ' and ' : '')+conditionData.where;
+  }
+  if (conditionData.searchWhere) {
+    queryParam.where+=(queryParam.where!='' ? ' and ' : '')+conditionData.searchWhere;
+  }
+  return queryParam;
+}
+
+//构造导出链接参数
+export const constructExportUrl = (conditionData, exportName) => {
+  //1 构造链接
+  const { rootPath } = api; //RESTful请求的根路径
+  let url = rootPath+'/expenditure_executions/export/'+exportName;
+
+  //2 构造链接参数
+  let queryParam = constructQueryParam(conditionData);
+
+  for (let paramName in queryParam) {
+    url+= (url.indexOf('?')>0 ? '&' : '?')+paramName+'='+queryParam[paramName];
+  }
+
+  return service.appendTokenInfoToUrl(url);
+}
+
+
+//差旅费导出地址
+export const travelExpenseExportUrl = ({conditionData}) => {
+  let urlParam = getUrlParam(conditionData);
+  let {rootPath} = api;
+  rootPath = rootPath.substring(0,rootPath.length-4);
+  let exporthref = `${rootPath}/expenditure_executions/export/travel_expense${urlParam}`;
+  return exporthref;
+}
+
+//业务招待费导出地址
+export const tripExpenseExportUrl = ({conditionData}) => {
+  let urlParam = getUrlParam(conditionData);
+  let {rootPath} = api;
+  rootPath = rootPath.substring(0,rootPath.length-4);
+  let exporthref = `${rootPath}/expenditure_executions/export/trip_expense${urlParam}`;
+  return exporthref;
+}
+
+function getUrlParam(conditionData){
+  let urlParam = '?1=1';
+  //开始时间
+  if(conditionData.startDate){
+    urlParam = urlParam + '&startDate=' + dateToString(conditionData.endDate);
+  }
+  //结束时间
+  if(conditionData.endDate){
+    urlParam = urlParam + '&endDate=' + dateToString(conditionData.endDate);
+  }
+  //生产或基建
+  if(conditionData.expenditureType){
+    urlParam = urlParam + '&expenditureType=' + conditionData.expenditureType
+  }
+  //项目
+  if(conditionData.fundSource){
+    urlParam = urlParam + '&fundSource=' + conditionData.fundSource.id
+  }
+  //状态
+  if(conditionData.state){
+    urlParam = urlParam + '&state=' + conditionData.state
+  }
+  //公司
+  if(conditionData.subsidiary){
+    urlParam = urlParam + '&subsidiary=' + conditionData.subsidiary.id
+  }
+  //合同或者费用
+  if(conditionData.type){
+    urlParam = urlParam + '&type=' + conditionData.type
+  }
+  //使用部门
+  if(conditionData.useDept){
+    urlParam = urlParam + '&useDept=' + conditionData.useDept.id
+  }
+  //年度
+  if(conditionData.year){
+    urlParam = urlParam + '&year=' + conditionData.year
+  }
+  return urlParam;
+}
+
+function dateToString(date){
+  let result = moment(date).format('YYYY-MM-DD')
+  return result;
+}

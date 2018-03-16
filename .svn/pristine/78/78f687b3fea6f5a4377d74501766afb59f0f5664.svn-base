@@ -1,0 +1,471 @@
+import { Menu, Icon, Modal, message } from 'antd';
+import { DragDropContext } from 'react-dnd';
+import HTML5Backend from 'react-dnd-html5-backend';
+
+import {
+  arrayToTree,
+  groupDataList,} from 'utils';
+import service from 'service';
+
+//引入样式组件
+import {
+  StyledMenu,
+  StyledTable,
+  StyledDropdown,
+  theme
+} from './styled';
+
+import EditableCell from './EditableCell';
+import DragRow from './DragRow';
+
+//列表组件
+class List extends React.Component{
+  render() {
+      //解构参数
+      const {
+          treedata = false,
+          editMode, //编辑模式
+          list, //列表定义，ViewLayout注入
+          modelName, //模型名称，ViewLayout注入
+          model, //模型，ViewLayout注入
+          tabs, //tab数组，ViewLayout注入
+          dispatch,
+          loading,
+          appTheme, //应用皮肤定义
+          heightOffset = 0, //高度调整量
+          uid, //多个视图用一个模型时，用来区分不同的视图
+      } = this.props;
+
+      let {
+          size = 'middle', permissions, columns, rowActions,
+          rowSelection, bordered, colDefaultLink, scrollx,
+          groupKey, groupRecordFunc,//2018-01-19 sgf 添加分组设置
+          dragAble,//2018-03-06 sgf 添加可拖动设置
+          ...tableProps
+      } = list;  //2017-12-19 zyk 添加横向滚动scrollx支持
+      permissions = permissions || {};
+      //sgf add 2018-1-29 添加表格底部
+      let footer = undefined;
+      if (tableProps.footer) {
+          footer = tableProps.footer(model.list);
+          tableProps = {
+              ...tableProps, footer: () => {
+                  return footer
+              }
+          }
+      }
+      //end
+
+      //设置选择配置
+      if (rowSelection) {
+          rowSelection.selectedRowKeys = model.selectedRowKeys;
+          rowSelection.selectedRows = model.selectedRows;  //2017-12-04 zyk 视图选中行
+          rowSelection.onChange = this.handelRowSelected;
+      }
+
+      //构造操作列
+      let isTreeColumn = false; //列是否是树结构 2018-01-24
+      if (columns && columns.length > 0) {
+          for (let i = 0; i < columns.length; i++) {
+              if (columns[i].children != undefined && columns[i].children != null) {
+                  isTreeColumn = true;
+                  break;
+              }
+          }
+      }
+      if (isTreeColumn) { //2018-01-24 zyk若是树结构的列 则调用构造构造树结构列方法返回
+          columns = this.constructTreeColumnsConfig(columns);
+      }
+      else {
+          columns = this.constructColumnsConfig();
+      }
+      //获取数据
+      let dataSource = model.list;
+
+      if (dataSource && treedata && !groupKey) { // 树形数据视图
+          dataSource = arrayToTree(dataSource, 'id', 'parentId');
+      }
+
+      //设置了分组信息就将数据分组
+      if (groupKey && groupRecordFunc) {
+          dataSource = groupDataList(dataSource, groupKey, groupRecordFunc);
+      }
+
+      let key = modelName + 'ListTable' + uid;
+      if (!dataSource) {
+          dataSource = [];
+          //sgf add 2018-2-26 没有数据时候key给不一样的值，这样默认转开就可以展开了。
+          key = 'dataNull'
+      }
+
+      //2018-03-06 sgf add  拖动排序
+      let components=undefined;
+      let onRow=undefined;
+      if(dragAble){
+        components = {
+          body: {
+            row: DragRow,
+          },
+        }
+        onRow=(record, index) => ({
+          index,
+          moveRow: this.moveRow,
+        })
+      }
+     //end
+
+      //显示UI
+      theme.contentHeight = appTheme.height.content + heightOffset;
+      return (
+          <StyledTable {...tableProps} key={key}
+                       size={size}
+                       tabs={tabs}
+                       bordered={bordered || true}
+                       scroll={{
+                           y: theme.table.height() - theme.table.header.totalHeight() - 2,
+                           x: scrollx
+                       }}  //2017-12-19 zyk 添加横向滚动scrollx支持
+                       columns={columns}
+                       dataSource={dataSource}
+                       loading={loading}
+                       rowKey={ (record, index) => service.parseRecordUrl(record) || record._key || index } //2018-01-24 zyk 添加rowKey获取方式，若数据已包含_key信息,则用_key作为rowKey
+                       pagination={false}
+                       rowSelection={rowSelection}
+                       onChange={this.handleTableChange}
+                       components={components}
+                       onRow={onRow}
+          />
+      );
+  }
+
+  //2018-03-06 sgf add  拖动排序
+  moveRow = (dragIndex, hoverIndex) => {
+    //解构参数
+    const {
+      modelName, //模型名称，ViewLayout注入
+      dispatch,
+      uid, //多个视图用一个模型时，用来区分不同的视图
+    } = this.props;
+
+    dispatch({type:`${modelName}/resetSort`,
+      payload:{
+        dragParam:{dragIndex,hoverIndex},
+        dataKey:uid,
+      }
+    })
+  }
+
+  //处理表格变化事件
+ handleTableChange=(pagination, filters, sorter, dto='o')=> {
+     //解构参数
+     const {
+         modelName, //模型名称，ViewLayout注入
+         model, //模型，ViewLayout注入
+         dispatch,
+         uid, //多个视图用一个模型时，用来区分不同的视图
+     } = this.props;
+    if (!sorter) return;
+
+    let sort = '';
+    if (sorter.order) {
+      const order = sorter.order.startsWith('asc') ? 'asc' : 'desc';
+      sort = dto+'.'+sorter.field+','+order;
+    }
+
+    dispatch({type:`${modelName}/query`,
+      payload:{
+        page: model.page.number,
+        sort,
+        dataKey:uid,
+      }
+    })
+  }
+
+  //处理选择的行变化事件
+   handelRowSelected=(selectedRowKeys, selectedRows)=> {
+     //解构参数
+     const {
+         modelName, //模型名称，ViewLayout注入
+         dispatch,
+         uid, //多个视图用一个模型时，用来区分不同的视图
+     } = this.props;
+    dispatch({
+      type: modelName+'/save',
+      payload: {
+        dataKey: uid,
+        selectedRowKeys: selectedRowKeys,
+        selectedRows:selectedRows //2017-12-04 zyk 视图选中行
+      }
+    });
+  }
+
+  //处理行被点击事件
+   handleRowClicked=(text, record, actionType)=> {
+    this.handleRecordOperation(actionType || 'view', record);
+  }
+
+  //构造列配置
+   constructColumnsConfig=()=> {
+       //解构参数
+     let {columns, rowActions, colDefaultLink,
+     } = this.props.list;
+    let newColumns = [];
+
+    //把无权限的列删除
+    for (let col of columns) {
+      //如果视图指定了缺省列link，则未指定列都加：郑波2017-11-29增加
+      if (!col.link && colDefaultLink) {
+        col.link = colDefaultLink;
+        if (col.render&&!col.textRender) {
+          col.textRender = col.render;
+          col.render = undefined;
+        }
+      }
+      //---END---
+
+      if (service.authz(col.permission)) {
+        if (col.link) { //处理链接列
+          this.addLinkToCol(col);
+        }
+        else {
+          if (!col.render) col.render = col.textRender;
+        }
+
+        if (col.editor) { //处理可编辑列
+          this.addEditorIntoCol(col);
+        }
+
+        newColumns.push(col);
+      }
+    }
+    //把操作列加入
+    this.addRowActions(newColumns, rowActions);
+
+    return newColumns;
+  }
+
+  //构造树结构列配置 zyk 2018-01-24
+   constructTreeColumnsConfig=(columns)=> {
+     //解构参数
+     const {
+         list, //列表定义，ViewLayout注入
+     } = this.props;
+     let { rowActions,
+     } = list;
+
+    if(columns&&columns.length>0){
+      for(let i=0;i<columns.length;i++){
+      let column=columns[i];
+       if (service.authz(column.permission)) {
+          if(column.editor){
+            this.addEditorIntoCol(column);
+            columns[i]=column;
+          }
+          if(column.children){
+            constructTreeColumnsConfig(column.children);
+          }
+        }
+      }
+    }
+    //把操作列加入
+    this.addRowActions(columns, rowActions);
+    return columns;
+  }
+
+
+  //加入链接
+   addLinkToCol=(col)=> {
+    col.render = (text, record) =>
+      <a href="javascript:void(0)"
+        onClick={() => this.handleRowClicked(text, record, col.link)}
+      >
+        {col.textRender ? col.textRender(text, record) : text||'***'}
+      </a>
+  }
+
+  //加入editor
+   addEditorIntoCol=(col)=> {
+     //解构参数
+     const {
+         editMode, //编辑模式
+         modelName, //模型名称，ViewLayout注入
+         model, //模型，ViewLayout注入
+         dispatch,
+         uid, //多个视图用一个模型时，用来区分不同的视图
+     } = this.props;
+    let controlProps = col.controlProps;
+    col.render = (text, record) => {
+      //郑波2017-11-23增加：可以动态计算列的属性，如key等
+      if (col.editorRender) {
+        let colProps = col.editorRender(text, record);
+        col.key = colProps.key;
+        col.editor = colProps.editor;
+      }
+      //---END---
+
+      return (
+      <EditableCell
+        key={col.key+'EditableCell'}
+        editMode={editMode}
+        editor={col.editor}
+        type={col.type}
+        title={col.title}
+        editable={this.getEditorEditMode(editMode, model, record)} //是否可以编辑
+        modelName={modelName} //模型名称
+        record={record} //记录
+        field={col.key} //值对应的字段
+        textRender={col.textRender}
+        valueRender={col.valueRender}
+        dispatch={dispatch}
+        controlProps={controlProps}
+        uid={uid}
+      />
+      )
+    }
+  }
+
+  //加入操作列
+   addRowActions=(columns, rowActions)=> {
+     //解构参数
+     const {
+         list, //列表定义，ViewLayout注入
+     } = this.props;
+
+     let { permissions,
+     } = list;
+     permissions = permissions || {};
+    if (rowActions) {
+      //构造缺省操作菜单
+      if (rowActions.length == 0) {
+        rowActions = [
+          { title:'编辑', type:'edit', permission: permissions.edit },
+          { title:'查看', type:'view' },
+          { title:'删除', type:'delete', permission: permissions.delete },
+        ];
+      }
+
+      const action = {
+        title: '操作',
+        key: 'operation',
+        fixed: 'right',
+        width: 80,
+        render: (text, record) => (
+          <StyledDropdown overlay={this.menu(record)} >
+            <div>
+              <Icon type="bars" />
+              <Icon type="down" />
+            </div>
+          </StyledDropdown>
+        ),
+      };
+      columns.push(action);
+    }
+  }
+
+  //处理记录操作
+   handleRecordOperation=(actionType, record)=> {
+     //解构参数
+     const {
+         modelName, //模型名称，ViewLayout注入
+         dispatch,
+         uid, //多个视图用一个模型时，用来区分不同的视图
+     } = this.props;
+    //构造消息类型
+    let messageType = modelName+'/'+actionType;
+
+    if (actionType == 'delete') { //删除处理
+      this.showDeleteConfirm(messageType, record);
+      return;
+    }
+
+    if (actionType == 'edit' || actionType == 'view') { //编辑和查看都发送打开消息
+      messageType = modelName+'/open';
+    }
+
+    //发送消息
+    dispatch({
+      type: messageType,
+      payload:{
+        dataKey: uid,
+        record: record,
+        state: {
+          mode: actionType,
+          origin: Object.assign({},record),
+        },
+      }
+    })
+  }
+
+  //构造记录的操作列菜单
+   menu=(record)=> {
+     //解构参数
+     const {
+         list, //列表定义，ViewLayout注入
+     } = this.props;
+
+     let {rowActions,
+     } = list;
+    return (
+      <StyledMenu
+        onClick={ ({key}) =>this.handleRecordOperation(
+          (rowActions)[key-1].type, record
+        ) }
+      >
+      {
+        rowActions.map((item, index) =>
+          service.authz(item.permission) &&
+          <Menu.Item key={index+1}>
+            <span>{item.title}</span>
+          </Menu.Item>)
+      }
+      </StyledMenu>
+    )
+  }
+
+  //删除确认
+   showDeleteConfirm=(messageType, record)=> {
+     //解构参数
+     const {
+         dispatch,
+         uid, //多个视图用一个模型时，用来区分不同的视图
+     } = this.props;
+    Modal.confirm({
+      title: '删除确认',
+      content: '删除选择的记录，是否确定？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk() {
+        //发送删除消息
+        dispatch({
+          type: messageType,
+          payload:{
+            dataKey: uid,
+            record: record,
+          }
+        })
+      },
+    });
+  }
+
+  //判断是否可以编辑
+   getEditorEditMode=(editMode, model, record)=> {
+    if (!editMode || editMode == '' || !model ) return false;
+    if (editMode == 'table') return model.viewEditState==true; //全表编辑模式
+
+    //行编辑模式
+    return model.viewEditState==service.parseRecordUrl(record);
+  }
+}
+
+
+import PropTypes from 'prop-types';
+List.propTypes = {
+  type: PropTypes.string,
+  list: PropTypes.object.isRequired,
+  editMode: PropTypes.string,
+  modelName: PropTypes.string.isRequired,
+  model: PropTypes.object.isRequired,
+  dispatch: PropTypes.func.isRequired,
+}
+
+export default DragDropContext(HTML5Backend)(List);

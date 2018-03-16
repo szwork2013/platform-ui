@@ -1,0 +1,36 @@
+import {modelTemplate} from 'utils';
+import Form from './Form';
+import service from 'service';
+
+const namespace = {
+  name: 'task_problem', //模型的命名空间
+  title: '问题上报', //模型的名称
+  clazz: 'TaskProblem', //模型对应的后台实体类
+};
+
+const modelParam = {
+  recordProjection: 'list',
+  form: Form,
+  titleRender: (record) => !record.taskName ? '新问题上报' : '问题上报:'+record.taskName,
+  searchParam: { //搜索条件
+    size: 20, //指定每页记录数
+    sort: 'id,asc' //缺省排序规则
+  },
+  effects:{
+    //改变任务的状态
+    * setState({payload}, {call, put, select}) {
+      let {record} = payload;
+      let {state} = payload;
+      record.state = state;
+      let resultUpdateRecord=yield call(service.updateRecord, service.parseRecordUrl(record), record);
+      if(resultUpdateRecord){
+        yield put({
+          type:"query",
+          payload:{}
+        });
+      }
+    },
+  }
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

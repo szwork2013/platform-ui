@@ -1,0 +1,26 @@
+import { Row, Col } from 'antd';
+
+import OptionsForm from './OptionsForm';
+import ResultView from './ResultView';
+import ResultStatInfo from './ResultStatInfo';
+
+import modelDefinition from '../../model';
+
+const ViewGrid = ( props ) => {
+  //取得模型名称
+  const modelName = modelDefinition.namespace;
+
+  let optionsFormHeight = 36;
+  return (
+    <div>
+      <ResultStatInfo />
+      <div>
+        <ResultView
+          modelName={modelName}
+        />
+      </div>
+    </div>
+  )
+}
+
+export default ViewGrid;

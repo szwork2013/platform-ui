@@ -1,0 +1,10 @@
+import styled from 'styled-components';
+
+//第几步的标题样式
+const StyledStageDiv = styled.div`
+  color: #108ee9;
+`;
+
+module.exports = {
+  StyledStageDiv,
+}

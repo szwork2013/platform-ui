@@ -1,0 +1,97 @@
+import React from 'react';
+import {Table,Button} from 'antd';
+
+import service from 'service';
+
+import {StyledButton} from './styled'
+import SupplierSelect from '../SupplierSelect'
+
+//权限定义表单
+class PlanItem extends React.Component{
+
+  componentDidMount() {
+
+  }
+
+  deleteItem=()=>{
+    alert('delete');
+  }
+
+  newItem=()=>{
+    const {record, dispatch, year} = this.props;
+
+    let where = 'o.year=\''+year+'\'';
+
+    let searchParam={ //搜索条件
+      filter: {
+        where,
+      },
+      linkAttrs:[],
+      size: 20, //指定每页记录数
+    };
+
+    const formProps = service.constructPropsOfForm('material', record);
+    formProps.searchParam=searchParam;
+
+    //发送消息显示对话框
+    dispatch({
+      type:'modaldialog/show',
+      payload: {
+        iconType: 'info-circle-o',
+        title: '选择IE耗材',
+        content: <SupplierSelect {...formProps} />,
+        onOk: () => {
+
+        },
+        style: "width:800px !important;",
+      }
+    });
+  }
+
+  render(){
+    //解构参数
+    let {
+      record:{planItems},
+      canEdit
+    } = this.props;
+
+    //设置数字格式
+    const inputNumberProps = {
+      precision:0.00,
+      size: 'medium',
+    }
+
+    let columns=[ // 和antd table组件的列定义相同
+      { title: '名称', dataIndex: 'material.name', key: 'material.name'},
+      { title: '规格', width: 100, dataIndex: 'material.specification', key: 'material.specification'},
+      { title: '供应商',width: 120, dataIndex: 'supplier.name', key: 'supplier.name'},
+      { title: '数量', width: 145, dataIndex: 'demandQuantity', key: 'demandQuantity'},
+      { title: '单位', width: 145, dataIndex: 'material.measurementUnit', key: 'material.measurementUnit'},
+      { title: '单价', width: 145, dataIndex: 'material.priceWithTax', key: 'material.priceWithTax' },
+      { title: '使用人', width: 145, dataIndex: 'user.name', key: 'user.name' },
+      { title: '备注', width: 145, dataIndex: 'remarkx', key: 'remark' },
+    ];
+
+//显示UI
+    return (
+      <div>
+        <div>
+          {canEdit&&<StyledButton
+            type="primary"
+            onClick={this.newItem}
+          >
+            新增
+          </StyledButton>}
+          {canEdit&&<StyledButton
+            type="primary"
+            onClick={this.deleteItem}
+          >
+            删除
+          </StyledButton>}
+        </div>
+        <Table columns={columns} dataSource={planItems} />
+      </div>
+    );
+  }
+}
+export default PlanItem;

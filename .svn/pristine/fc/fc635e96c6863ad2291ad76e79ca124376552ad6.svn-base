@@ -1,0 +1,162 @@
+import React from 'react';
+
+import {Form as FormLayout,FormItem, DropdownSelect} from 'components';
+
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+
+import service from 'service';
+
+//资金属性选项
+let expenditureTypeOptions = [
+  {'id':'operating','name':'生产费用'},
+  {'id':'infrastructure','name':'基建费用'},
+];
+
+class EmbeddedForm extends React.Component {
+  constructor(props) {
+    super(props);
+
+    //初始化
+    //科目树搜索条件
+    this.categorySearchParam= { //搜索条件
+      filter: { //过滤规则
+        where: '1=2',
+      },
+      size: 1000, //指定每页记录数
+      sort: 'o.sortNo,asc' //缺省排序规则
+    };
+
+    //资金来源搜索条件
+    this.fundSourceSearchParam= { //搜索条件
+      filter: { //过滤规则
+        where: '1=2',
+      },
+      size: 1000, //指定每页记录数
+      sort: 'o.sortNo,asc' //缺省排序规则
+    };  
+  }
+
+  render() {
+    //计算动态参数
+    this.constructDynamicProps(this.props);
+
+  	//解构参数
+  	let {
+      model,
+      canEdit = true, //FormContainer注入：是否可编辑
+      getFieldDecorator,
+      setFieldsValue,
+  	} = this.props;
+
+    const { record, state} = model;
+
+    //构造FormItem的公共参数
+    const itemProps = { canEdit, required:true, getFieldDecorator,setFieldsValue,controlProps:{allowClear:false}};
+    const oneItemWidth = ['95%','30%','65%'];
+
+    let expenditureType = record._expenditureType;
+
+  	//显示UI
+  	return (
+      <Form layout='inline' style={{height:'100%'}}>
+        <Row>
+          <FormItem type='RadioGroup' {...itemProps} width={oneItemWidth}
+            title='资金属性' itemKey='_expenditureType' list={expenditureTypeOptions}
+            initialValue={expenditureType}
+            onChange={this.handleExpenditureTypeChange}
+          />
+        </Row>
+        <Row>
+          <FormItem type='Select' {...itemProps} width={oneItemWidth}
+            title={expenditureType=='operating'?'场站':'项目'}
+            modelName='expenditure_fundsource' searchParam={this.fundSourceSearchParam}
+            itemKey='_fundSourceHref' initialValue={record._fundSourceHref}
+            onSelect={this.onFundSourceSelect}
+            on
+          />
+        </Row>
+        <Row>
+          <FormItem type='TreeSelect' {...itemProps} width={oneItemWidth}
+            title={expenditureType=='operating'?'年度营运支出科目':'管理概算科目'}
+            modelName='expenditure_categories' searchParam={this.categorySearchParam}
+            itemKey='_categoryHref' initialValue={record._categoryHref}
+            onSelect={this.onCategorySelect} onlyLeafSelectable={true}
+          />
+        </Row>
+      </Form>
+  	);
+  }
+
+  //计算动态属性
+  constructDynamicProps = (props) => {
+    //解构参数
+    let {model} = props;
+
+    const {record, state} = model;
+    this.record = record;
+
+    let expenditureType = record._expenditureType;
+
+    //科目树搜索条件
+    this.categorySearchParam.filter.where='o.type='+(expenditureType=='operating'?1:0);
+
+    //资金来源搜索条件
+    this.fundSourceSearchParam.filter.where='o.type='+(expenditureType=='operating'?0:1);
+  }
+
+  //处理资金属性变化
+  handleExpenditureTypeChange = (e) => {
+    let value = e.target.value;
+
+    //清空现有值
+    this.props.setFieldsValue({_fundSourceHref:null, _categoryHref:null})
+
+    //重新设置科目选择范围
+    this.categorySearchParam.filter.where = 'o.type='+(value=='operating'?1:0);
+    DropdownSelect.queryData({
+      controlId:'_categoryHref',
+      dispatch: this.props.dispatch,
+      searchParam: this.categorySearchParam,
+      modelName: 'expenditure_categories',
+      type: 'Tree',
+    });
+
+    //重新设置资金来源选择范围
+    this.fundSourceSearchParam.filter.where = 'o.type='+(value=='operating'?0:1);
+    DropdownSelect.queryData({
+      controlId:'_fundSourceHref',
+      dispatch: this.props.dispatch,
+      searchParam: this.fundSourceSearchParam,
+      modelName: 'expenditure_fundsource',
+      type: 'List',
+    });
+
+    this.setState({refresh: true})
+  }
+
+  //资金来源选择事件处理
+  onFundSourceSelect = (value, node) => {
+    let record = node.props.dataRef;
+    this.record._fundSourceObj = {
+      id: record.id,
+      name: record.name,
+      href: value,
+      budgetSourceName: record.budgetSourceName,
+    }
+    return true;
+  }
+
+  //科目选择事件处理
+  onCategorySelect = (value, node) => {
+    let record = node.props.dataRef;
+    this.record._categoryObj = {
+      href: value, //记录的链接
+      fullName: record.fullName, //分类的全名
+    }
+    return true;
+  }
+}
+
+export default EmbeddedForm;

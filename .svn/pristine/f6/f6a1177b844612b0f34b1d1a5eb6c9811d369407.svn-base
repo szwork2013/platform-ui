@@ -1,0 +1,168 @@
+import { modelTemplate , config} from 'utils';
+import Form from './Form';
+import service from 'service';
+import wfservice from '../../../utils/workflowService';
+const { api, serverPath } = config; //取得RESTful api配置信息
+//权限模型定义
+const namespace = {
+  name: 'tasks', //模型的命名空间
+  title: '任务', //模型的名称
+  clazz: 'Task',
+  linkAttrs: ['dept'], //需要抓取的关联属性
+};
+
+//获取打开记录tab的标题
+function getRecordTabTitle(titleRender, modelTitle, record) {
+  if (titleRender) {
+    return titleRender(record);
+  }
+
+  if (!record || record._key) {
+    return '新'+modelTitle;
+  }
+
+  return modelTitle+'：'+record.name || record.title || record.subject;
+}
+
+const modelParam = {
+  form: Form, //使用的表单
+  effects:{
+    //获取当前登陆人的任务代办数目
+    * fetchTaskTodo({payload}, {call, put, select}) {
+      let url = `${serverPath}/tasks/getTodoCount`;
+      let todoCount = yield call(service.httprequest,url);
+      yield put({
+        type:"save",
+        payload:{
+          todoCount:todoCount
+        }
+      });
+    },
+    //处理搜索
+    * search({payload}, {call, put, select}) {
+      let {search} = payload;
+      if(search === '' || !search)
+        search = '%';
+      yield put({
+        type:"query",
+        payload:{
+          searchParam:{
+            searchContent:search
+          }
+        }
+      })
+    },
+    //处理任务状态选择
+    * changeState({payload}, {call, put, select}) {
+      let {state} = payload;
+      yield put({
+        type:"query",
+        payload:{
+          searchParam:{
+            state:state
+          }
+        }
+      })
+    },
+    //改变任务的状态
+    * setState({payload}, {call, put, select}) {
+      let {record} = payload;
+      let {state} = payload;
+      record.state = state;
+      let resultUpdateRecord=yield call(service.updateRecord, service.parseRecordUrl(record), record);
+      if(resultUpdateRecord){
+        yield put({
+          type:"query",
+          payload:{}
+        });
+      }
+    },
+
+    //视图消息：打开记录
+    *openWfForm ({ payload }, { call, put, select }) {
+      const {list, selectedRowKeys} = yield select(({task_report}) => task_report);
+      let id = selectedRowKeys[0].substring(selectedRowKeys[0].lastIndexOf('/')+1,selectedRowKeys[0].length);
+      let selectRecord;
+      for(var i = 0; i<list.length; i++){
+        let tempid = list[i].id;
+        if(tempid === parseInt(id)){
+          selectRecord = list[i];
+          break;
+        }
+      }
+      let {rootPath} = api;
+      let taskhref = `${rootPath}/tasks/${selectRecord.taskId}`;
+      let taskrecord = yield call(service.httprequest, taskhref, {});
+      if(!taskrecord.xpnProcessInstanceId){
+        let todo = yield call (wfservice.startProcess,{
+          refVarName:'tasks',
+          processNo:'taskworkflow',
+          record:taskrecord
+        });
+        wfservice.setTodoListAndInstanceId(taskrecord, todo);
+        //调用服务更新记录：为了保存instanceId
+        let resultUpdateRecord=yield call(service.updateRecord, service.parseRecordUrl(taskrecord), taskrecord);
+        if (resultUpdateRecord == null){
+          message.success("流程关联失败！请联系管理员或者重新创建记录！", 3);
+          return;
+        }
+      }
+      payload = {
+        record : taskrecord,
+        state:{
+          mode: 'view',
+          origin: taskrecord
+        }
+      };
+      const namespace = 'tasks';
+      const model = yield select(state=> state[namespace]);
+      const {form, modelTitle, clazz, recordProjection, titleRender } = model;
+      let { record, state, queryType } = payload;
+      let href = service.parseRecordUrl(record);
+      if (!record._key) { //非新记录：从服务器请求记录的数据
+        const recordOpenJpql = service.constructRecordOpenUrl(model);
+        record = yield call(service.queryRecord, href, {clazz, projection:recordProjection, jpql:recordOpenJpql});
+        if (record == null)
+          return;
+        //从连接里面拿出待办id（如果从待办或者已办打开的情况）
+        let todoId=wfservice.getTodoIdFromHref(href);
+        //郑波2017-11-15增加：解决从待办事项中打开，href不一致的问题
+        href = service.parseRecordUrl(record);
+        //---END---
+
+        //如果需要工作流，则请求待办列表
+        if (wfservice.getInstanceId(record)) {
+          const todoList = yield call(wfservice.requestSelfTodoList,
+            namespace, record,todoId);
+          wfservice.setTodoListAndInstanceId(record, todoList);
+        }
+
+        record = service.processLinkAttrsOfRecord(record);
+        if (state) state.origin = record;
+      }
+      else { //新记录，重新构造state
+        state = { mode: 'new', origin: record };
+      }
+
+      //构造tabs请求参数
+      const param = {
+        title: getRecordTabTitle(titleRender, modelTitle, record),
+        key: href,
+        component: form,
+        model: {
+          record: Object.assign({}, record),
+          state: state,
+          queryType: queryType, //记录打开视图的查询类型
+        },
+      };
+
+      //调用接口创建新tab
+      yield put ({
+        type:'apptabs/newTab',
+        payload: param,
+      });
+    },
+  }
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

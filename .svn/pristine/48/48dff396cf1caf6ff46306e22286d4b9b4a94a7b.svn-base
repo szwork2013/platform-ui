@@ -1,0 +1,53 @@
+import React from 'react';
+import { Button,Checkbox} from 'antd'
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+
+import {
+  StyledTable as Table, 
+  StyledTr as Row,
+  StyledLabelTd as LabelCol,
+  StyledTd as Col,
+} from '../../../../styled';
+
+import service from 'service';
+import wfservice from 'wfservice';
+
+//权限定义表单
+class ReportView extends React.Component{
+  //构造函数：初始化组件
+  constructor(props) {
+    super(props);
+ 
+  }
+
+  componentWillMount() {
+
+  }
+
+  render() {
+    //1 解构参数
+    let {
+      index,
+      canEdit = true, //FormContainer注入：是否可编辑
+      dispatch,
+      getFieldDecorator,
+      setFieldsValue,
+      formCanEdit,
+    } = this.props;
+
+    //获取当前用户名
+    const userName = service.userInfo.user.name;
+
+   
+    //显示UI
+    return (
+      <div>
+        12222222222222222
+      </div>
+    )
+   } 
+}// end of class
+
+export default ReportView;

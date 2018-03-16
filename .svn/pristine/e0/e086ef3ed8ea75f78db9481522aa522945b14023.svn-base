@@ -1,0 +1,70 @@
+import {ModuleLayout} from 'components';
+import {connect} from 'dva';
+const Layout = (props) => {
+  let {taskTodoCount} = props;
+  const menuItems = [
+    {
+      path: 'list/year',
+      icon: 'solution',
+      title: '年度任务清单'
+    }, {
+      path: 'list/week',
+      icon: 'solution',
+      title: '每周任务清单'
+    },{
+      path: 'problem/list',
+      icon: 'solution',
+      title: '需协调问题清单',
+    }, {
+      path: 'report',
+      icon: 'mail',
+      title: '任务填报',
+      permission: 'task.report',
+      badgeCount: taskTodoCount,
+      children: [
+        {
+          path: 'todo',
+          icon: 'pause-circle-o',
+          title: '待办事项',
+          badgeCount: taskTodoCount
+        }, {
+          path: 'done',
+          icon: 'check',
+          title: '已办事项'
+        }
+  
+      ]
+    }, {
+      path: 'assign',
+      icon: 'edit',
+      title: '任务下达',
+      permission: 'task.assign'
+    }, {
+      path: 'problem/report',
+      icon: 'mail',
+      title: '需协调问题',
+      children: [
+        {
+          path: 'inhand',
+          icon: 'pause-circle-o',
+          title: '未解决'
+        }, {
+          path: 'handled',
+          icon: 'check',
+          title: '已解决'
+        }
+      ]
+    }
+  ];
+  return (<ModuleLayout
+    trigger
+    siderTitle='任务'
+    siderIcon='solution'
+    menu={menuItems}
+    {...props}/>)
+}
+function mapStateToProps(state) {
+  const taskTodoCount = state.tasks.todoCount;
+  return {taskTodoCount};
+}
+export default connect(mapStateToProps)(Layout);

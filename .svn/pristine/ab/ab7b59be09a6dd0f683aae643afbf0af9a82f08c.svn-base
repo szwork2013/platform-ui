@@ -1,0 +1,66 @@
+import { Input } from 'antd';
+
+import {
+  View, Attachment,
+} from 'components';
+
+import service from 'service';
+
+const ViewComponent = ( props ) => {
+  //解构参数
+  let {
+    model,
+    searchParam,
+    linkPropName,//要设置的字段link值名称
+    objPropName,//要设置的对象的属性名称
+    canEdit = true, //FormContainer注入：是否可编辑
+    dispatch
+  } = props;
+  const userLink = service.userInfo.user.selfLink;
+
+  //定义操作条属性
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: false, //显示删除按钮
+    newRow: true
+  }
+
+  //定义列表属性
+  const listProps = {
+    columns:[ // 和antd table组件的列定义相同
+      { title: '名称', width: 250,dataIndex: 'name', key: 'name', link: 'edit', editor:<Input /> },
+      { title: '文号', width: 250, dataIndex: 'referenceNo', key: 'referenceNo', editor:<Input />},
+      {title: '附件', type:'attachment', dataIndex: '_files', key: '_files',
+        editor:<Attachment showDetail={false}/>}
+    ],
+    rowSelection: {type:'radio', onSelect: handleOnRowSelect}, //选择功能配置
+  };
+
+  //翻页器属性
+  const paginationBarProps = {pagination: true,reloadButton:false};
+
+  return (
+    <View key={'redHeadDoc'+'ViewLayout'} {...props}
+          searchParam={searchParam}
+          heightOffset={-90}
+          editMode='row' //编辑模式：单行编辑
+          modelName='expenditure_redheaddoc' //模型名称
+          actionBar={actionBarProps} //操作条定义
+          list={listProps} //列表定义
+          paginationBar={paginationBarProps}
+    />
+  )
+
+  //处理试图行被选中事件
+  function handleOnRowSelect(record, selected, selectedRows) {
+    const {record: execution} = model;
+    execution[objPropName]  = record;
+    execution[linkPropName] = service.parseRecordUrl(record);
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({expenditure_redheaddoc, loading, apptabs:{tabs}}) =>
+  ({expenditure_redheaddoc, loading: loading.models['expenditure_redheaddoc'], tabs})
+)(ViewComponent);

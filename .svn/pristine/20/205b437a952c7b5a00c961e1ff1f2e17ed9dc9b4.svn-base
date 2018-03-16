@@ -1,0 +1,211 @@
+/* global window */
+import lodash from 'lodash'
+
+// 连字符转驼峰
+String.prototype.hyphenToHump = function () {
+  return this.replace(/-(\w)/g, (...args) => {
+    return args[1].toUpperCase()
+  })
+}
+
+// 驼峰转连字符
+String.prototype.humpToHyphen = function () {
+  return this.replace(/([A-Z])/g, '-$1').toLowerCase()
+}
+
+// 日期格式化
+Date.prototype.format = function (format) {
+  const o = {
+    'M+': this.getMonth() + 1,
+    'd+': this.getDate(),
+    'h+': this.getHours(),
+    'H+': this.getHours(),
+    'm+': this.getMinutes(),
+    's+': this.getSeconds(),
+    'q+': Math.floor((this.getMonth() + 3) / 3),
+    S: this.getMilliseconds(),
+  }
+  if (/(y+)/.test(format)) {
+    format = format.replace(RegExp.$1, `${this.getFullYear()}`.substr(4 - RegExp.$1.length))
+  }
+  for (let k in o) {
+    if (new RegExp(`(${k})`).test(format)) {
+      format = format.replace(RegExp.$1, RegExp.$1.length === 1 ? o[k] : (`00${o[k]}`).substr(`${o[k]}`.length))
+    }
+  }
+  return format
+}
+
+
+/**
+ * @param   {String}
+ * @return  {String}
+ */
+
+const queryURL = (name) => {
+  let reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i')
+  let r = window.location.search.substr(1).match(reg)
+  if (r != null) return decodeURI(r[2])
+  return null
+}
+
+/**
+ * 数组内查询
+ * @param   {array}      array
+ * @param   {String}    id
+ * @param   {String}    keyAlias
+ * @return  {Array}
+ */
+const queryArray = (array, key, keyAlias = 'key') => {
+  if (!(array instanceof Array)) {
+    return null
+  }
+  const item = array.filter(_ => _[keyAlias] === key)
+  if (item.length) {
+    return item[0]
+  }
+  return null
+}
+
+/**
+ * 数组格式转树状结构
+ * @param   {array}     array
+ * @param   {String}    id
+ * @param   {String}    pid
+ * @param   {String}    children
+ * @return  {Array}
+ */
+const arrayToTree = (array, id = 'id', pid = 'pid', children = 'children') => {
+  let data = lodash.cloneDeep(array)
+  let result = []
+  let hash = {}
+  data.forEach((item, index) => {
+    hash[data[index][id]] = data[index]
+  })
+
+  data.forEach((item) => {
+    let hashVP = hash[item[pid]]
+    if (hashVP) {
+      !hashVP[children] && (hashVP[children] = [])
+      hashVP[children].push(item)
+    } else {
+      result.push(item)
+    }
+  })
+  return result
+}
+
+//判断2个对象是否相同
+const isSameObject = (obj1, obj2) => {
+  if (!obj1 && !obj2) return true;
+  for(let attr in obj1) {
+    let val1 = obj1[attr] || '';
+    let val2 = obj2[attr] || '';
+    if (!attr.startsWith('_') && val1 != val2)
+        return false;
+  }
+  return true;
+}
+
+//把数字转换为会计格式
+const accountingNumberFormat = (number) => {
+  let value = number+'';
+  value = `${number}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  let dotPos = value.indexOf('.');
+  if (dotPos < 0) return value+'.00';
+  value += '00';
+  return value.substring(0,dotPos)+value.substring(dotPos, dotPos+3);
+}
+
+const formDate=(date)=>{
+  let dateString='';
+  if(date){
+    dateString=date.substring(0,4)+'年'+date.substring(5,7)+'月'+date.substring(8,10)+'日';
+  }
+  return dateString;
+}
+
+const groupDataList=(list,groupKey,groupRecordFunc)=>{
+
+  if(!groupKey||!list||list.length==0) return list;
+
+  //无分组就是有一个合计
+  if(groupKey=='_undefined'){
+    let resultList=[];
+    let groupRecord=groupRecordFunc(list,groupKey);
+    if(!groupRecord) return list;
+    groupRecord.children=[];
+    resultList.push(groupRecord);
+    list.map((item)=>{
+      groupRecord.children.push(item);
+      resultList.push(groupRecord);
+    });
+    //最后返回数据。
+    return resultList;
+  }
+
+  //分组数组
+  let groupValueList=[];
+  list.map((item)=>{
+    //在对象中查找分组的值
+    let groupValue=getValueInObjByKey(item,groupKey);
+    //查询分组数组里面有没有对应的分组，有就直接加入，没有就创建一组分组。
+    let selectResult=groupValueList.find(r=>r.groupValue==groupValue);
+    if(selectResult){
+      selectResult.list.push(item);
+    }else{
+      let newGroup={groupValue:groupValue,list:[]};
+      newGroup.list.push(item);
+      groupValueList.push(newGroup);
+    }
+  });
+
+  //组合分组数据
+  let resultList=[];
+  groupValueList.map((item)=>{
+    //先加入分组行，再加入分组下面的数据行
+    let groupRecord=groupRecordFunc(item.list,groupKey);
+    if(groupRecord){
+      resultList.push(groupRecord);
+      groupRecord.children=[];
+      item.list.map((subItem)=>{
+        groupRecord.children.push(subItem);
+      });
+    }else{
+      item.list.map((subItem)=>{
+        resultList.push(subItem);
+      });
+    }
+  });
+//最后返回数据。
+  return resultList;
+}
+
+const getValueInObjByKey=(record,key)=>{
+  let keyArray=key.split('.');
+  let subRuleVaule=undefined;
+  keyArray.forEach((subKey)=>{
+    //初始第一个子key 在record里面获取
+    if(!subRuleVaule){
+      if(record[subKey]){
+        subRuleVaule=record[subKey];
+      } else  subRuleVaule='';
+    }else{//后面连续的子key 就在原来取到值得value里面取值
+      if(subRuleVaule[subKey]){
+        subRuleVaule=subRuleVaule[subKey];
+      }else subRuleVaule='';
+    }
+  })
+  return subRuleVaule;
+}
+
+module.exports = {
+  queryURL,
+  queryArray,
+  arrayToTree,
+  isSameObject,
+  accountingNumberFormat,
+  formDate,
+  groupDataList,
+  getValueInObjByKey,
+}

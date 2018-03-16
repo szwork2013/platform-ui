@@ -1,0 +1,37 @@
+import styled from 'styled-components';
+
+//第几步的标题样式
+const StyledStageDiv = styled.div`
+  color: #108ee9;
+`;
+
+const StyledTable = styled.table`
+  width: 100% !important;
+  border-collapse: collapse;
+  border: 1px solid #f04134;
+  input, textarea, div {
+    background-color: #fff !important;
+  }
+`;
+
+const StyledTr= styled.tr`
+`;
+
+const StyledLabelTd= styled.td`
+  width: 140px;
+  border: 1px solid #f04134;
+  text-align: center;
+`;
+
+const StyledTd= styled.td`
+  padding-top: 1px;
+  border: 1px solid #f04134;
+`;
+
+export {
+  StyledStageDiv,
+  StyledTable,
+  StyledTr,
+  StyledLabelTd,
+  StyledTd,
+}

@@ -1,0 +1,13 @@
+import { modelTemplate } from 'utils';
+//权限模型定义
+const namespace = {
+  name: 'taskfeedbacks', //模型的命名空间
+  title: '反馈', //模型的名称
+  clazz: 'TaskReport',
+  dataSource: 'task_report', //数据源
+};
+
+const modelParam = {
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

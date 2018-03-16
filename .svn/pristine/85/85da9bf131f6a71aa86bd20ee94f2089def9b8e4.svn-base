@@ -1,0 +1,135 @@
+import React from 'react';
+import { DatePicker, Input } from 'antd';
+
+import {
+  View,
+  DropdownSelect,
+  ExportButton
+} from 'components';
+
+import { config } from 'utils';
+
+import modelDefinition from '../../../common/PlanItems/model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+//权限定义表单
+class ResultView extends React.Component {
+
+  render() {
+
+  let {
+    conditionData,
+  } = this.props;
+
+  let uid = 'wzlytj';
+  const actionBarProps = {
+    barHeight:0,
+    searchBar: false,
+    newRow: false,
+    new: false,
+    delete:  false,
+    saveTable: false,
+    reloadTable:false,
+    buttons:[]
+  }
+
+  //翻页器属性
+  const paginationBarProps = {reloadButton:false};
+
+    //定义搜索条件
+    const searchParam = {
+      filter:undefined,
+      size:undefined,
+      sort:undefined,
+      search: 'get_draw_statistic_data',
+      ...conditionData,
+    };
+
+  //定义列表属性
+  const listProps = {
+    columns: this.constructColumns(),
+    footer: this.constructFooter,
+    groupKey : 'draw.org.id',
+    groupRecordFunc : this.computeGroupRecord,
+    defaultExpandAllRows : true,
+  };
+
+  //显示UI
+  return (
+    <View key={'plantItem' + 'ViewLayout' + uid} {...this.props}
+          searchParam={searchParam}
+          heightOffset={-35}
+          modelName={modelName} //模型名称
+          actionBar={actionBarProps} //操作条定义
+          list={listProps} //列表定义
+          uid={uid}
+          paginationBar={paginationBarProps}
+    />
+  )
+  }
+
+  constructColumns = () => {
+     let columns = [ // 和antd table组件的列定义相同
+        { title: '物资名称', width: 150, dataIndex: 'material.name', key: 'material.name' },
+        { title: '规格型号', width: 250, dataIndex: 'material.specification', key: 'material.specification' },
+        { title: '单位', width: 80, dataIndex: 'material.measurementUnit', key: 'material.measurementUnit' },
+        {
+          title: '单价(含税)(元)', width: 135, dataIndex: 'material.priceWithTax',
+          key: 'material.priceWithTax', textRender: (value, record) => value&&Number(value).toFixed(2)
+        },
+        { title: '领用数量', width: 90, dataIndex: 'demandQuantity', key: 'demandQuantity' },
+        {
+         title: '总价(含税)(元)', width: 145, dataIndex: 'demandTotal', key: 'demandTotal',
+         textRender: (value, record) => {
+           if (record._isGroup) return '';
+           let totalAmount = record.material.priceWithTax * record.demandQuantity;
+           if(record.material.type=='ENGINEERING_MATERIALS'||record.material.type==4){
+             totalAmount = record.material.priceWithTax * record.demandQuantity* record.material.convertRule;
+           }
+           return totalAmount.toFixed(2);
+         }
+        },
+      ];
+    return columns;
+  }
+
+
+  //计算分组行的
+  computeGroupRecord = (list, groupKey) => {
+    if (!list || list.length == 0) return undefined;
+    let newRecord = { _isGroup: true };
+    let firstOne = list[0];
+    newRecord._key = new Date().getTime() + firstOne.draw&&firstOne.draw.org && firstOne.draw.org.id;
+    newRecord.material = {};
+    //在名称上设置分组行的名称，在规格上设置合计信息
+    newRecord.material.name =firstOne.draw&&firstOne.draw.org && firstOne.draw.org.orgName;
+    let totalAmount = 0;
+    list.map((item) => {
+      totalAmount = totalAmount + (item.demandQuantity * item.material.priceWithTax);
+    });
+    totalAmount = totalAmount.toFixed(2);
+    newRecord.material.specification = '总金额:' + totalAmount + '元';
+    return newRecord;
+  }
+
+  //构造底部信息
+  constructFooter = (list) => {
+    if (!list) return '';
+    let footer = '';
+    let totalAmount = 0;
+    list.map((item) => {
+      totalAmount = totalAmount + (item.material.priceWithTax * item.demandQuantity);
+    });
+    totalAmount = totalAmount.toFixed(2);
+    footer = '合计金额:    |    合计：' + totalAmount + '元。';
+    return footer;
+  }
+
+}
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({ plan_item, loading }) =>
+  ({ plan_item, loading: loading.models[modelName] })
+)(ResultView);

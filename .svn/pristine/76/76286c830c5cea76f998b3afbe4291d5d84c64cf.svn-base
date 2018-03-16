@@ -1,0 +1,28 @@
+import { connect } from 'dva';
+import { Form as  FormLayout } from 'components'
+import Form from './EmbeddedForm';
+import wfservice from 'wfservice';
+const FormComponent = (props) => {
+  const {model} = props;
+  const {record} = model;
+  let isNew = FormLayout.isNewRecord(model);
+  let canEdit = true;
+  if(record.state !== 'DRAFT')
+    canEdit = false;
+  let formCanEdit = isNew || wfservice.authz(record, ['formEdit']);
+  //按钮条配置
+  const actionBar = {
+    save: formCanEdit,
+    edit: false, //显示编辑按钮
+    close: true, //显示关闭按钮
+  };
+	//显示UI
+	return (
+    <FormLayout actionBar={actionBar} embeddedForm={<Form formCanEdit={formCanEdit}/>} {...props}>
+    </FormLayout>
+	);
+}
+
+export default connect(({apptabs, loading}) =>
+  ({apptabs, loading:loading.models.task_report})
+)(FormComponent);

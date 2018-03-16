@@ -1,0 +1,199 @@
+import {
+  Col,
+  Button,
+  Icon,
+  Popover,
+  Input,
+  Select,
+  Checkbox
+} from 'antd';
+import {Form as FormLayout, FormItem} from 'components';
+import {config} from 'utils';
+import service from 'service';
+let token = service.userInfo.token.value;
+const {api} = config; //取得RESTful api配置信息
+let {rootPath} = api;
+rootPath = rootPath.substring(0, rootPath.length - 4);
+// let exporthref = `${rootPath}/task_report/export?xpnToken=${token}`;
+const Search = Input.Search;
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+const Option = Select.Option;
+
+//选项设置表单
+const OptionsForm = (props) => {
+  //解构参数
+  let {
+    conditionData = {}, //条件数据
+    dispatch
+  } = props;
+  function getExportHref() {
+    let exporthref = `${rootPath}/task_report/export?xpnToken=${token}`;
+    if (conditionData.state) {
+      exporthref = exporthref + '&state=' + `in (${conditionData.state})`;
+    }
+    if (conditionData.dept) 
+      exporthref = exporthref + '&deptId=' + conditionData.dept.id;
+    return exporthref;
+  }
+
+  //构造FormItem的公共参数
+  const oneItemWidth = ['96%', '10%', '90%'];
+
+  const {getFieldDecorator, setFieldsValue} = props.form;
+  const itemProps = {
+    canEdit: true,
+    getFieldDecorator,
+    setFieldsValue,
+    width: oneItemWidth,
+    controlProps: {
+      allowClear: true
+    },
+    required: false
+  };
+
+  const handleSearch = (search) => {
+    dispatch({type: 'executionScreenParams/search', payload: {
+        search
+      }});
+  }
+
+  return (
+    <Form layout='inline' style={{
+      height: '40px'
+    }}>
+      <Row>
+        <Col span={3}>
+          {renderFoundSoucceSelect()}
+        </Col>
+        <Col span={2}>
+          {renderCategorySelect()}
+        </Col>
+        <Col span={4}>
+          {renderProjectNameSelect()}
+        </Col>
+        <Col span={3}>
+          {renderBudgetSelect()}
+        </Col>
+        <Col span={1}>
+          <Button type="danger" ghost
+            onClick={()=>{
+              dispatch({ type: 'executionScreen/mydelete'}); 
+            }}
+          >
+            删除选中
+          </Button>
+        </Col>
+      </Row>
+    </Form>
+  )
+
+  //构造事项名筛选组件
+  function renderProjectNameSelect() {
+    return (
+      <Select
+        style={{ width: 160 }}
+        allowClear
+        placeholder="按事项名称条件筛选"
+        onChange= {(value) => {
+          if(value === '1'){
+            value = {'projectName.value': 'null', 'projectName.operator': 'is'};
+          }else if(value === '2'){
+            value = {'projectName.value': `'^[a-zA-Z0-9._-]$'`, 'projectName.operator': 'REGEXP'};
+          }else if(value === '3'){
+            value = {'projectName.value': `'[a-zA-Z0-9._-]'`, 'projectName.operator': 'REGEXP'};
+          }else if(value === '4'){
+            value = {'projectName.value': `'^[a-zA-Z0-9._-]'`, 'projectName.operator': 'REGEXP'};
+          }else if(value === '5'){
+            value = {'projectName.value': `'[a-zA-Z0-9._-]$'`, 'projectName.operator': 'REGEXP'};
+          }else if(value === '6'){
+            value = {'projectName.value': `(SELECT project_name FROM expenditure_execution GROUP BY project_name HAVING count(*) > 1)`,
+             'projectName.operator': 'in',
+             order:'ee.project_name asc, ee.budget asc'};
+          }else if(!value){
+            value = {'projectName.value': undefined, 'projectName.operator': undefined};
+          }
+          dispatch({ type: 'executionScreenParams/changeConditionData', payload: {projectName:value} }); 
+        }}
+      >
+        <Option key={'1'} value={'1'}>事项名称为空</Option>
+        <Option key={'2'} value={'2'}>事项名称全ascii</Option>
+        <Option key={'3'} value={'3'}>事项名称包含ascii</Option>
+        <Option key={'4'} value={'4'}>事项名称以ascii开头</Option>
+        <Option key={'5'} value={'5'}>事项名称以ascii结尾</Option>
+        <Option key={'6'} value={'6'}>事项名称相同</Option>
+      </Select>
+    );
+  }
+
+  //构造预算来源筛选组件
+  function renderFoundSoucceSelect() {
+    return (
+      <Checkbox
+        onChange = {({target:{checked}})=>{
+          let fundSourceId = {'fundSourceId.value': undefined, 'fundSourceId.operator': undefined};
+          if(checked){
+            fundSourceId = {'fundSourceId.value': 'null', 'fundSourceId.operator': 'is'};
+          }
+          dispatch({ type: 'executionScreenParams/changeConditionData', payload: {fundSourceId:fundSourceId} });
+        }}
+      >
+        预算来源为空
+      </Checkbox>
+    );
+  }
+  //构造科目筛选组件
+  function renderCategorySelect() {
+    return (
+      <Checkbox
+        onChange = {({target:{checked}})=>{
+          let categoryId = {'categoryId.value': undefined, 'categoryId.operator': undefined};
+          if(checked){
+            categoryId = {'categoryId.value': 'null', 'categoryId.operator': 'is'};
+          }
+          dispatch({ type: 'executionScreenParams/changeConditionData', payload: {categoryId:categoryId} });
+        }}
+      >
+        科目为空
+      </Checkbox>
+    );
+  }
+  //构造预算筛选组件
+  function renderBudgetSelect() {
+    return (
+      <Select
+        style={{ width: 130 }}
+        allowClear
+        placeholder="按预算条件筛选"
+        onChange= {(value) => {
+          if(value === '1'){
+            value = {'budget.value': '0', 'budget.operator': '<='};
+          }else if(value === '2'){
+            value = {'budget.value': `null`, 'budget.operator': 'is'};
+          }else if(value === '3'){
+            value = {'budget.value': `(SELECT budget FROM expenditure_execution GROUP BY budget HAVING count(*) > 1)`, 
+            'budget.operator': 'in',
+            order:'ee.budget asc, ee.project_name asc'};
+          }else if(!value){
+            value = {'budget.value': undefined, 'budget.operator': undefined};
+          }
+          dispatch({ type: 'executionScreenParams/changeConditionData', payload: {budget:value} }); 
+        }}
+      >
+        <Option key={'1'} value={'1'}>预算小于等于0</Option>
+        <Option key={'2'} value={'2'}>预算为null</Option>
+        <Option key={'3'} value={'3'}>预算相同</Option>
+      </Select>
+    );
+  }
+}
+
+import {Form as AntdForm} from 'antd';
+const antdOptionsForm = AntdForm.create({})(OptionsForm);
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import {connect} from 'dva';
+export default connect(({executionScreenParams: {
+    conditionData
+  }}) => ({conditionData}))(antdOptionsForm);

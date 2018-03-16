@@ -1,0 +1,79 @@
+import service from 'service';
+
+import { config} from 'utils';
+const { api } = config; //取得RESTful api配置信息
+
+//构造查询参数
+export const constructSearchParam = (conditionData) => {
+  if (!conditionData) return;
+  let where = ' 1=1';
+  for(let attrName in conditionData){
+    if(attrName=='where' || attrName=='fundSource') continue;
+    let attrValue = conditionData[attrName];
+    if (!attrValue || attrValue==-1 || attrValue=='') continue;
+    let attrWhere = '';
+    if(attrName=='expenditureType'){ //支出性质
+      continue;
+
+    }
+    else if(attrName=='categorynull') {
+      if(attrValue==true){
+         attrWhere='o.category is null';
+      }
+
+    }
+    else if(attrName=='projectnull') {
+        if(attrValue==true){
+         attrWhere='o.fundSource is null';
+        }
+    }          
+    else if(attrName=='category') {
+        continue;
+    } 
+    else {
+      attrWhere+='o.'+attrName+'='+attrValue;
+    }
+
+    if (attrWhere && attrWhere!='')
+      where += where=='' ? attrWhere : ' and '+attrWhere;
+  }
+
+  //总是增加仅查询从domino或excel导入的数据
+  where += ' and o.sourceType=1';
+
+  if(conditionData.where&&conditionData.where!=''){
+    where+=' and '+conditionData.where;
+  }
+
+  return {
+    filter: { //过滤规则
+      where,
+    },
+    size: 20,
+    sort: 'o.projectNo,desc'
+  };
+}
+
+//构造预算来源
+export const constructBudgetSource = ({fundSource, year, category, expenditureType}) => {
+  fundSource = fundSource || {};
+  category = category || {};
+  year = expenditureType=='operating' ? '/'+year+'/' : '/';
+
+  let budgetSource = (fundSource.budgetSourceName||'')+year+(category.fullName||'');
+  return budgetSource;
+}
+
+//获取统计信息
+export const statForDraft = (conditionData) => {
+  const { rootPath } = api; //RESTful请求的根路径
+  const url = rootPath+'/expenditure_executions/stat/fordraft';
+  return service.queryRecord(url, conditionData);
+}
+
+//获取统计信息
+export const batchUpdateMoney = (data) => {
+  const { rootPath } = api; //RESTful请求的根路径
+  const url = rootPath+'/expenditure_executions/batchUpdateMoney';
+  return service.queryRecord(url, data);
+}

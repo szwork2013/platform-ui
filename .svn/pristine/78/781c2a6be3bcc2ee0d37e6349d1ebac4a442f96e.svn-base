@@ -1,0 +1,48 @@
+import React from 'react'
+import PropTypes from 'prop-types'
+
+import {Redirect, Route, Switch} from 'dva/router';
+
+import dynamic from 'dva/dynamic';
+
+const mainRoute = (props) => {
+  const {
+    match,
+  } = props;
+
+  //动态加载路由
+  const categoryRoute = dynamic({
+    app,
+    component: () => require('./category')
+  })
+
+  const fundSourceRoute = dynamic({
+    app,
+    component: () => require('./fundsource')
+  });
+  const paymentPropRoute = dynamic({
+    app,
+    component: () => require('./paymentprop')
+  });
+  const redheaddocRoute = dynamic({
+    app,
+    component: () => require('./redheaddoc')
+  });
+
+  const rootPath = match.path;
+  return (
+    <Switch>
+      <Redirect exact from={rootPath} to={rootPath + '/category'} push={true}/>
+      <Route path={rootPath + '/category/:expenditureType'} component={categoryRoute}/>
+      <Route path={rootPath + '/fundsource'} component={fundSourceRoute}/>
+      <Route path={rootPath + '/paymentprop'} component={paymentPropRoute}/>
+      <Route path={rootPath + '/redheaddoc'} component={redheaddocRoute}/>
+    </Switch>
+  )
+}
+
+mainRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default mainRoute;

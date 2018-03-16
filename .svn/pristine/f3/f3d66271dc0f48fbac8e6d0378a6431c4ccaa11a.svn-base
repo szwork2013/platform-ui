@@ -1,0 +1,11 @@
+import styled from 'styled-components';
+const theme = {
+}
+
+const CommentItemListDiv = styled.div`
+  flex: 2;
+`;
+
+module.exports = {
+  CommentItemListDiv,
+}

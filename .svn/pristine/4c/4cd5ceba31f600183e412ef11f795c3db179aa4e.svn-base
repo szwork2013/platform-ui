@@ -1,0 +1,48 @@
+import {message} from 'antd';
+
+import { Form } from 'components'
+
+import service from 'service';
+
+const Layout = (props) => {
+  //按钮条配置
+  const actionBar = {
+    save: true, //显示保存按钮
+    saveAndClose: true, //显示保存并关闭按钮
+    edit: true, //显示编辑按钮
+    close: true, //显示关闭按钮
+  };
+
+  const {record, state} = props.model;
+
+  //表单配置
+  const embeddedForm=[
+    { row: 1, type:'Input', title:'分类名称', key:'text' },
+    { row: 2, type:'InputNumber', title:'失效年度', key:'endYear' },
+    { row: 3, type:'InputNumber', title:'序号', key:'sortNo' },
+    { row: 4, type:'TreeSelect', title:'上级分类', key:'parent', required: false,
+      labelKey:'text', modelName:'expenditure_categories', searchParam:{ //搜索条件
+        size: 1000, //指定每页记录数
+        sort: 'sortNo,asc', //缺省排序规则
+        filter: {
+        },
+      },
+      onSelect: (value) => {
+        const href = service.parseRecordUrl(record);
+        if (href===value) {
+          message.error('上级分类不能是当前分类！');
+        }
+      },
+    }
+  ];
+
+	//显示UI
+	return (
+    <Form actionBar={actionBar} embeddedForm={embeddedForm} {...props} />
+	);
+}
+
+import { connect } from 'dva';
+export default connect(({apptabs, loading}) =>
+  ({apptabs, loading:loading.models.expenditure_categories})
+)(Layout);

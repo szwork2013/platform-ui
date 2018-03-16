@@ -1,0 +1,56 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+import service from 'service';
+import wfservice from 'wfservice';
+import config from 'config';
+
+//权限模型定义
+const namespace = {
+  name: 'department_plan',
+  title:'部门计划',
+  clazz: 'DepartmentPlan', //模型对应的后台实体类
+  linkAttrs:['org','demandPlan']
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+    },
+    size: 20, //指定每页记录数
+    sort: 'o.id,asc' //缺省排序规则
+  },
+  form: Form, //使用的表单
+  titleRender: (record)=>record&&record.org? service.getRecordLinkAttr(record,'demandPlan').year+'年'+service.getRecordLinkAttr(record,'demandPlan').month+'月部门需求计划':'新部门需求计划',
+  effects: {
+    //表单消息：盖章
+    *stamp ({payload}, { call, put,select }) {
+      //结构参数
+      let { record,href }=payload;
+      const user = service.userInfo.user;
+      let callParam = {
+        method: 'get',
+        data: {
+          entityLink:service.getHrefOfLinkAttr(record).replace(config.API,''),
+          sealLink:'/orgs/'+user.org.id,
+          sealCategory:'seal',
+        }
+      }
+      let result =yield call(service.httprequest,config.API+'/stamp',callParam);
+      if(!result) return;
+      //调用接口更新tab的model
+      yield put ({
+        type:'apptabs/updateTab',
+        payload: {
+          key: href,
+          model: {record, state: {
+            origin: Object.assign(record)
+          }}
+        },
+      });
+    },
+
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

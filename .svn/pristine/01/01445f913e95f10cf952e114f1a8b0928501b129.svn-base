@@ -1,0 +1,23 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+//权限模型定义
+const namespace = {
+  name: 'expenditure_paymentprop',
+  title:'付款性质',
+  clazz: 'PaymentProp',
+  linkAttrs: [],
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: {
+    },
+    size: 1000, //指定每页记录数
+  },
+  form: Form, //使用的表单
+  //打开窗口标题生成器
+  titleRender: (record) => !record.name ? '新付款性质' :'付款性质：'+record.name,
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

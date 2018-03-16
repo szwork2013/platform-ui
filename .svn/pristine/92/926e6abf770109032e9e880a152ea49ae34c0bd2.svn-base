@@ -1,0 +1,12 @@
+import { Form as FormLayout } from 'components'
+import Form from './EmbeddedForm';
+
+const FormComponent = (props) => {
+
+	//显示UI
+	return (
+    	<FormLayout embeddedForm={<Form />} {...props} />
+	);
+}
+
+export default FormComponent;

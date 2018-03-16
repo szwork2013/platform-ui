@@ -1,0 +1,210 @@
+import React from 'react';
+import moment from 'moment';
+
+import service from 'service';
+
+//引入样式组件
+import {
+  StyledCellDiv,
+  StyledDisplayDiv,
+  theme,
+} from './styled';
+
+const dateFormat = 'YYYY-MM-DD';
+const dateTimeFormat = 'YYYY-MM-DD HH:mm:ss';
+
+//列表组件
+class EditableCell extends React.Component {
+  componentDidUpdate = () => {
+    if (this.editor) { //是被点击的单元格，则设置焦点
+      if (this.editor.focus)
+        this.editor.focus();
+      this.editor = undefined; //避免执行多次focus
+    }
+  }
+
+  render() {
+    const props = this.props;
+
+    //解构参数
+    const {
+      editMode, //编辑模式
+      editable, //是否可以编辑
+      type, //控件类型
+      modelName, //模型名称
+      editor, //构件
+      record, //记录
+      title, //字段名称
+      field, //对应的字段
+      textRender,
+      valueRender,
+      controlProps,
+      dispatch,
+    } = props;
+
+    let value = this.value||record[field];
+    if (valueRender) {
+      value = valueRender(record);
+    }
+
+    //构造编辑属性
+    const editorProps = {
+      value: value,
+      onChange: this.handleOnChange,
+      onMouseOut: this.handleOnSyncCellValue,
+      onBlur: this.handleOnSyncCellValue,
+      onDoubleClick: (e) => this.handleSetEditable(e, false),
+      ref: editor => { //是被点击的单元格，则设置editor属性
+        this.editor = this.onFocusField == field ? editor : undefined;
+        this.onFocusField = undefined; //避免执行多次focus
+      },
+      key: field+'Editor',
+      ...controlProps,
+    }
+
+    //构造显示值
+    let displayValue = this.constructDisplayValue({
+      type, value, record, editorProps, textRender, editable,
+    })
+
+    //显示UI
+    //情形1：不可编辑状态
+    if (!editable && type != 'attachment') {
+      const onClick = (e) => this.handleSetEditable(e, true);
+      return <StyledDisplayDiv onClick={onClick}>{displayValue}</StyledDisplayDiv>
+    }
+
+    //情形2：可编辑状态
+    return(
+      <StyledCellDiv editable = {editable || false}>
+      {
+        React.cloneElement(editor, editorProps)
+      }
+      </StyledCellDiv>
+    );
+  }
+
+  //构造显示值
+  constructDisplayValue = ({type, value, record, editable, editorProps, textRender}) => {
+    let displayValue = value || ' ';
+    type = type&&type.toLowerCase()||'';
+
+    editorProps = editorProps||{};
+
+    if (type == 'checkbox') {
+      displayValue = value ? '是' : '否';
+      editorProps.defaultChecked = value;
+    }
+    else if (type.includes('date')) {
+      displayValue = value&&moment(value).format(dateFormat);
+      editorProps.value = value&&moment(value);
+    }
+    else if (type=='attachment') {
+      editorProps.link = service.parseRecordUrl(record);
+      editorProps.disabled = record._key||!editable||false;
+    }
+    else {
+      if (textRender) displayValue = textRender(value, record);
+    }
+
+    return displayValue;
+  }
+
+  //需要同步单元格的值到模型时的事件处理
+  handleOnSyncCellValue = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    let value = this.value || e.target.value;
+    if (this.props.type == 'checkbox')
+      value = e.target.checked;
+
+    this.props.dispatch({
+      type: this.props.modelName+'/updateCell',
+      payload: {
+        editMode: this.props.editMode,
+        record: this.props.record,
+        key: this.props.field,
+        value: value,
+        dataKey: this.props.uid,
+      }
+    });
+  }
+
+  //处理控件值变化
+  handleOnChange = (e, extra) => {
+    let type = this.props.type&&this.props.type.toLowerCase()||'';
+
+    let value;
+    if (e&&e.preventDefault) {
+      e.preventDefault();
+      e.stopPropagation();
+      value = e.target.value;
+      if (type == 'checkbox')
+        value = e.target.checked;
+    }
+    else if (e&&type.includes('date')) {
+      this.value = e;
+      value = e.format(dateTimeFormat);
+    }
+    else if (type=='attachment') {
+      return;
+    }
+    else {
+      this.value = e;
+      value = e;
+    }
+
+    //特殊字段需要发送更新消息
+    if (type.includes('date')||type.includes('select')) {
+      this.props.dispatch({
+        type: this.props.modelName+'/updateCell',
+        payload: {
+          editMode: this.props.editMode,
+          record: this.props.record,
+          key: this.props.field,
+          value,
+          dataKey: this.props.uid,          
+        }
+      });
+    }
+    else {
+      this.props.record[this.props.field] = value;
+      this.setState({value: value}); //只是为了让组件更新，显示最新值
+    }
+  }
+
+  //设置编辑状态变化
+  handleSetEditable = (e, setEditable) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    this.onFocusField = this.props.field; //记录当前被点击的字段
+
+    this.props.dispatch({
+      type: this.props.modelName+'/setCellEditable',
+      payload: {
+        record: this.props.record,
+        key: this.props.field,
+        editMode: this.props.editMode,
+        value: setEditable,
+        dataKey: this.props.uid,
+      }
+    });
+  }
+}
+
+import PropTypes from 'prop-types';
+EditableCell.propTypes = {
+  editor: PropTypes.node.isRequired,
+  editable: PropTypes.bool,
+  type: PropTypes.string,
+  title: PropTypes.string.isRequired,
+  field: PropTypes.string.isRequired,
+  editMode: PropTypes.string.isRequired,
+  modelName: PropTypes.string.isRequired,
+  record: PropTypes.object.isRequired,
+  dispatch: PropTypes.func.isRequired,
+}
+
+export default EditableCell;

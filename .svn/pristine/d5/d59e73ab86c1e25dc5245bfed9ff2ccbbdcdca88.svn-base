@@ -1,0 +1,161 @@
+import React from 'react';
+import PropTypes from 'prop-types';
+
+import { Redirect, Route, Switch, routerRedux } from 'dva/router';
+import dynamic from 'dva/dynamic';
+
+import AppLayout from './Layout';
+
+//注册公用模型
+import { modelRegister } from 'utils';
+//机构
+import orgModel from '../sysadmin/main/orgs/model';
+modelRegister(orgModel);
+//人员
+import userModel from '../sysadmin/main/users/model';
+modelRegister(userModel);
+//角色
+import roleModel from '../sysadmin/main/roles/model';
+modelRegister(roleModel);
+
+//业务系统路由
+const businessRoute = (props) => {
+  //解构参数
+  const {
+    match,
+  } = props;
+
+  //动态加载路由
+  const homepageRoute = dynamic({
+    app,
+    component: () => import('./homepage')
+  });
+  const materialRoute = dynamic({
+    app,
+    component: () => import('./material')
+  });
+  //预算组件路由
+  const budgetRoute = dynamic({
+    app,
+    component: () => import('./budget')
+  });
+  const institutionRoute = dynamic({
+    app,
+    component: () => import('./institution')
+  });
+  const leaveRoute = dynamic({
+    app,
+    component: () => import('./leave')
+  });
+  const vehicleRoute = dynamic({
+    app,
+    component: () => import('./vehicle')
+  });
+  const indicatorRoute = dynamic({
+    app,
+    component: () => import('./indicator')
+  });
+  const datascreenRoute = dynamic({
+    app,
+    component: () => import('./datascreen')
+  });
+
+  const rootPath = match.path;
+
+  return (
+    <AppLayout {...props} key={'BusinessLayout'}>
+      <Switch>
+        <Redirect exact from={rootPath} to={rootPath + '/homepage'} push={true} />
+        <Route path={rootPath + '/homepage'} component={homepageRoute} />
+        <Route path={rootPath + '/material'} component={materialRoute} />
+        //预算路由，删老系统路由的请勿删除
+        <Route path={rootPath + '/budget'} component={budgetRoute} />
+        <Route path={rootPath + '/institution'} component={institutionRoute} />
+        <Route path={rootPath + '/leave'} component={leaveRoute} />
+        <Route path={rootPath + '/vehicle'} component={vehicleRoute} />
+        <Route path={rootPath + '/indicator'} component={indicatorRoute} />
+        <Route path={rootPath + '/datascreen'} component={datascreenRoute} />
+        <Redirect exact from={rootPath + '/sysadmin'} to={'/sysadmin'} push={true} />
+      </Switch>
+    </AppLayout>
+  )
+};
+
+businessRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default businessRoute;
+
+//注册模块模型：待办事项需要打开的模块的所有模型需要在这里注册
+//待办事项
+import todolinkModel from './todo/todolink/model';
+modelRegister(todolinkModel);
+//已办事项
+import donelinkModel from './todo/donelink/model';
+modelRegister(donelinkModel);
+//请假
+import leaveModel from './leave/leave/model';
+modelRegister(leaveModel);
+import leaveCategoryModel from './leave/category/model';
+modelRegister(leaveCategoryModel);
+//车辆
+import vehicleModel from './vehicle/usedrecord/model';
+modelRegister(vehicleModel);
+import carModel from './vehicle/car/model';
+modelRegister(carModel);
+//制度
+import institutionModel from './institution/institution/model';
+modelRegister(institutionModel);
+import institutionCategoryModel from './institution/category/model';
+modelRegister(institutionCategoryModel);
+//合同及费用
+import expenditureModel from './expenditure/execution/model';
+modelRegister(expenditureModel);
+import paymentModel from './expenditure/payment/model';
+modelRegister(paymentModel);
+import expCategoryModel from './expenditure/config/category/model';
+modelRegister(expCategoryModel);
+import fundsourceModel from './expenditure/config/fundsource/model';
+modelRegister(fundsourceModel);
+import payeeModel from './expenditure/config/payee/model';
+modelRegister(payeeModel);
+import userbankinfoModel from './expenditure/config/userbankinfo/model';
+modelRegister(userbankinfoModel);
+import expenditureDraftformModel from './expenditure/draftform/model';
+modelRegister(expenditureDraftformModel);
+import expenditureQueryformModel from './expenditure/queryform/model';
+modelRegister(expenditureQueryformModel);
+import expenditureStatformModel from './expenditure/statform/model';
+modelRegister(expenditureStatformModel);
+import expenditureDataCenterModel from './expenditure/common/DataCenter/model';;
+modelRegister(expenditureDataCenterModel);
+//2017-12-04 zyk  数据补录模型注册
+import expenditureModifyformModel from './expenditure/modifyform/model';
+modelRegister(expenditureModifyformModel);
+import indicator_categoryModel from './indicator/category/model';
+modelRegister(indicator_categoryModel);
+import budget_itemModel from './budget/config/item/model';
+modelRegister(budget_itemModel);
+import budget_representModel from './budget/config/represent/model';
+modelRegister(budget_representModel);
+import budget_orgmatchModel from './budget/config/orgmatch/model';
+modelRegister(budget_orgmatchModel);
+import budget_itemchargeModel from './budget/config/itemcharge/model';
+modelRegister(budget_itemchargeModel);
+import budget_sheetModel from './budget/config/sheet/model';
+modelRegister(budget_sheetModel);
+import budget_sheetgroupModel from './budget/config/sheetgroup/model';
+modelRegister(budget_sheetgroupModel);
+
+//物资模型注册
+import modelDepartmentPlan from './material/itconsumable/department/model';
+modelRegister(modelDepartmentPlan);
+import modelDemandPlan from './material/itconsumable/company/model';
+modelRegister(modelDemandPlan);
+import modelSupplier from './material/supplier/model';
+modelRegister(modelSupplier);
+import modelMaterial from './material/material/model';
+modelRegister(modelMaterial);
+import modelPlanItems from './material/common/PlanItems/model';
+modelRegister(modelPlanItems);

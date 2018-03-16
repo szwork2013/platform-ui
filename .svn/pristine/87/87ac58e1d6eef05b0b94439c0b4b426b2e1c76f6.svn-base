@@ -1,0 +1,7 @@
+import AutoButton from './Auto';
+import SelectButton from './Select';
+
+export default {
+	AutoButton,
+	SelectButton
+};

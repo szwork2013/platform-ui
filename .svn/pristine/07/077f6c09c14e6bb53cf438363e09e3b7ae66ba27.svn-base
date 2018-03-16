@@ -1,0 +1,203 @@
+import {message} from 'antd';
+
+import { modelTemplate } from 'utils';
+
+import Form from './Form';
+import { DropdownSelect } from 'components';
+
+import service from 'service';
+import {computeProjectName,constructBudgetSource} from './service'
+
+const namespace = {
+    name: 'expenditure_executions',
+    title:'立项',
+    clazz: 'Execution',
+    linkAttrs: ['category', 'category.parent', 'categoryparent.parent', 'categoryparentparent.parent', 'createdBy','fundSource', 'fundSource.org', 'reserveFundPayee','contractPayee'],
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+      clazz: 'Excution', //模型对应的后台实体类
+      where: '(1=1)', //条件
+    },
+    size: 20, //指定每页记录数
+    sort: 'o.projectNo,desc' //缺省排序规则
+  },
+  form: Form, //使用的表单
+  titleRender: (record)=> {
+    if (!record||!record.type) return '新立项申请';
+    let typeName = record.type==1?'费用立项申请':'合同立项申请';
+    if (record.projectName) return typeName+'：'+record.projectName;
+    return '新'+typeName;
+  },
+
+  effects: {
+    //消息：处理差旅费和业务招待费选择对话框ok消息
+    *onSelectExpenseOk ({payload}, { call, put,select }) {
+      const {setFieldsValue,record} = payload;
+
+      //计算事项名称
+      const projectName = computeProjectName(record);
+      if (!projectName||projectName=='') return;
+
+      record.projectName = projectName;
+      setFieldsValue({projectName});
+
+      //发消息关闭对话框
+      yield put({
+        type: 'modaldialog/save',
+        payload: {visible: false}
+      });
+    },
+
+    //消息：处理选择备用金收款人对话框ok消息
+    *onSelectReserveFundPayeeOk ({payload}, { call, put,select }) {
+      const {setFieldsValue,record} = payload;
+
+      //更新表单上的收款人信息
+      const payee = record._reserveFundPayee;
+      if (!payee) {
+        message.error('请选择一个收款人！');
+        return;
+      }
+
+      setFieldsValue({
+        _reserveFundPayeeName:payee.name,
+        _reserveFundPayeeBank:payee.bank,
+        _reserveFundPayeeBankno:payee.bankno,
+      });
+
+      //发消息关闭对话框
+      yield put({
+        type: 'modaldialog/save',
+        payload: {visible: false}
+      });
+    },
+
+    //消息：处理选择资金来源对话框ok消息
+    *onSelectFundSourceOk ({payload}, { call, put,select }) {
+      const {setFieldsValue,record} = payload;
+
+      if (!record._expenditureType||!record._categoryHref||!record._fundSourceHref) {
+        message.error('所有项目都需要填写！')
+        return;
+      }
+
+      //计算预算来源名称
+      const budgetSource = constructBudgetSource({
+        year: record.year,
+        expenditureType: record._expenditureType,
+        fundSource: record._fundSourceObj,
+        category: record._categoryObj
+      });
+
+      if (!budgetSource||budgetSource=='') return;
+
+      //设置预算来源名称、资金来源和科目
+      record.budgetSource = budgetSource;
+      record.fundSource = record._fundSourceObj.href;
+      record.category = record._categoryObj.href;
+
+      //设置控件的值
+      setFieldsValue({budgetSource, fundSource: record._fundSourceObj.href,
+        category: record._categoryObj.href});
+
+      //发消息关闭对话框
+      yield put({
+        type: 'modaldialog/save',
+        payload: {visible: false}
+      });
+    },
+
+    //表单消息：打开支付标签
+    *newPayment ({payload}, { call, put,select }) {
+      //解构消息
+      let { record } = payload;
+
+      //如果有state就设置state
+      if(payload.state)
+      yield call(service.updateRecord,service.parseRecordUrl(record)+'/state?state='+payload.state,{});
+
+      //如果有nokey 就编码
+      if(payload.noKey){
+        let result =yield call(service.updateRecord,service.parseRecordUrl(record)+'/no',{});
+        record[payload.noKey]=result;
+      }
+
+      let payRecord = {
+        expenditureExcution:service.getHrefOfLinkAttr(record),
+        execution:record,
+      };
+
+      let model = {record:payRecord, state:{mode:'new', origin:payRecord}}
+
+      yield put({
+        type: 'expenditure_payments/new',
+        payload: {processNo:'reimbursementV3',model}
+      })
+    },
+
+    //表单消息：创建收款人
+    *createPayee ({payload}, { call, put,select }) {
+      const { record,href,addParam }=payload;
+      let result=yield call(service.createRecord, 'expenditure_payee', {name:record.payeeName,bank:record.payeeBank,bankno:record.payeeBankNo});
+
+      if(!result)
+        return;
+      //设置新增之后的信息
+      if(!record._embedded)
+        record._embedded={};
+      record._embedded.contractPayee=result;
+      record.contractPayee=service.parseRecordUrl(result);
+
+      //发送消息让分类选择组件刷新选项数据
+      DropdownSelect.add({...addParam,item:result});
+
+      //调用接口更新tab的model
+      yield put ({
+        type:'apptabs/updateTab',
+        payload: {
+          key: href,
+          model: {record, state: {
+            origin: Object.assign(record)
+          }}
+        },
+      });
+    },
+
+    //表单消息：创建收款人
+    *createreserveFundPayee ({payload}, { call, put,select }) {
+      const { record,href,addParam }=payload;
+      const user = service.userInfo.user;
+
+      let result=yield call(service.createRecord, 'userbankinfo',
+        {bank:record.reserveFundPayeeBank,
+          bankno:record.reserveFundPayeeBankno,user:user.selfLink});
+
+      if(!result)
+        return;
+      //设置新增之后的信息
+      if(!record._embedded)
+        record._embedded={};
+      record._embedded.reserveFundPayee=result;
+      record.reserveFundPayee=service.parseRecordUrl(result);
+      //发送消息让分类选择组件刷新选项数据
+      DropdownSelect.add({...addParam,item:result});
+      //调用接口更新tab的model
+      yield put ({
+        type:'apptabs/updateTab',
+        payload: {
+          key: href,
+          model: {record, state: {
+            origin: Object.assign(record)
+          }}
+        },
+      });
+    },
+
+  },
+
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

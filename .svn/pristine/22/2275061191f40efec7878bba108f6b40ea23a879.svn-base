@@ -1,0 +1,96 @@
+import React from 'react';
+
+import { Input, Checkbox, InputNumber } from 'antd';
+import {View} from 'components';
+
+import {accountingNumberFormat} from 'utils';
+
+import modelDefinition from '../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+import service from 'service';
+
+const ViewComponent = ( props ) => {
+  //定义操作条属性
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: false, //显示删除按钮
+    newRow: false
+  }
+
+  //获取当前用户id
+  const userId=service.userInfo.user.id;
+  let searchParam={ //搜索条件
+    linkAttrs:['expenditureExcution'],
+    filter: { //过滤规则
+      clazz: 'Payment', //模型对应的后台实体类
+      where: 'o.createdBy.id='+userId, //条件
+    },
+    size: 20, //指定每页记录数
+    sort: 'o.id,desc' //缺省排序规则
+  }
+
+  //定义列表属性
+  const listProps = {
+    columns:[ // 和antd table组件的列定义相同
+      { title: '事项名称', dataIndex: 'expenditureExcution.projectName', key: 'expenditureExcution.projectName',
+        textRender: (text, record)=>record.expenditureExcutionName, link: 'open', sorter:true},
+      { title: '支付名称', width: 100, dataIndex: 'paymentSeq', key: 'paymentSeq',link:'open', sorter:true,
+        textRender: (text, record)=>{
+          if(record.paymentSeq!=undefined){
+            return '第'+record.paymentSeq+'次支付';
+          }
+        },
+        className: 'xpiui-view-col-center',
+      },
+      { title: '报销金额(元)',width: 120, fulltext:false, dataIndex: 'paymentMoney', key: 'paymentMoney', sorter:true,
+        textRender:(value) => {
+          if (!value) return '***';
+          return accountingNumberFormat(value);
+        },
+        className: 'xpiui-view-col-right',
+      },
+      { title: '支出性质', width: 90,  dataIndex: 'paymentProp', key: 'paymentProp', sorter:true,
+        textRender: (text, record)=>record.paymentPropText||(record.paymentProp&&record.paymentProp.name)},
+      { title: '审批进度', width: 90,  dataIndex: 'state', key: 'state', link:'open', sorter:true,
+        className: 'xpiui-view-col-center',
+        textRender: (text, record)=>{
+        if(record.state!=undefined){
+          if(record.state=='APPLY'){
+            return '申请报销';
+          }
+           if(record.state=='PAY'){
+            return '已支付';
+          }
+          if(record.state=='END'){
+            return '已办结';
+          }
+        }
+      }},
+      { title: '创建时间', width: 145, dataIndex: 'createdTime', key: 'createdTime', fulltext:false, sorter:true },
+    ],
+    colDefaultLink: 'open',
+  };
+
+  //翻页器属性
+  const paginationBarProps = {};
+
+  return (
+    <View key={modelName+'ViewLayout'} {...props}
+      editMode='row' //编辑模式：单行编辑
+      modelName={modelName} //模型名称
+      searchParam={searchParam}
+      actionBar={actionBarProps} //操作条定义
+      list={listProps} //列表定义
+      paginationBar={paginationBarProps}
+    />
+  )
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({expenditure_payments, loading, apptabs:{tabs}}) =>
+  ({expenditure_payments, loading: loading.models[modelName], tabs})
+)(ViewComponent);

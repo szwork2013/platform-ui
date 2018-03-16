@@ -1,0 +1,197 @@
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+//const Row = FormContainer.StyledRow;
+
+//引入styled组件
+import {
+  StyledHeaderDiv,
+  StyledExplainrDiv,
+} from './styled';
+import {
+  StyledTable as Table, 
+  StyledTr as Row,
+  StyledLabelTd as LabelCol,
+  StyledTd as Col,
+} from '../../../styled';
+import service from 'service';
+import wfservice from 'wfservice';
+
+//请假表单
+const LeaveForm = (props) => {
+  //1 解构参数
+  let {
+    model, //FormContainer注入：模型
+    canEdit = true, //FormContainer注入：是否可编辑
+    getFieldDecorator,
+    setFieldsValue,
+    getFieldValue,
+    formCanEdit,
+    } = props;
+
+  const { record, state } = model;
+
+
+  //2 构造FormItem的公共参数
+  const itemProps = { canEdit:formCanEdit, getFieldDecorator,setFieldsValue,getFieldValue};
+
+  const oneItem = ['96%','10%','90%'];
+  const twoItem = ['48%', '20%', '80%'];
+  const threeItem = ['32%','30%','62%'];
+  //item宽度样式
+  const itemWidth = ['100%','0%','100%'];
+  //3 构造分类选项的搜索参数
+  const categorySearchParam= { //搜索条件
+    filter: { //过滤规则
+    },
+    size: 1000, //指定每页记录数
+    sort: 'o.sortNo,asc' //缺省排序规则
+  };
+
+  //4 构造请假人和请假人所在部门
+  let leavePerson = record.leavePerson||service.userInfo.user.name;
+  let leaveDept = record.leaveDept||service.userInfo.user.orgFullName;
+  leaveDept = leaveDept.split('/')[0];
+
+	//5 显示UI
+	return (
+    <Form layout='inline'>
+      <div>
+      <StyledHeaderDiv>新能源云南分公司请假管理流程</StyledHeaderDiv>
+        <Table>
+          <Row>
+            <LabelCol>请假人</LabelCol>
+            <Col colSpan={2}>
+              <FormItem title='请假人' type='Input' {...itemProps} width={itemWidth} canEdit={false}
+                itemKey='_leavePerson' initialValue={leavePerson}
+              />
+            </Col>
+            <LabelCol>所在部门</LabelCol>
+            <Col colSpan={5}>
+              <FormItem title='所在部门' type='Input' {...itemProps} width={itemWidth} canEdit={false}
+                itemKey='_leaveDept' initialValue={leaveDept}
+              />
+            </Col>
+            <LabelCol>编号</LabelCol>
+            <Col colSpan={4}>
+              <FormItem title='编号' type='Input' {...itemProps} width={itemWidth}  required={false}
+                itemKey='leaveNo' initialValue={record.leaveNo} canEdit={false} placeholder='未编号'
+              />
+            </Col>  
+          </Row>
+          <Row>
+            <LabelCol>请假时间</LabelCol>
+            <Col colSpan={4}>
+              <FormItem title='请假时间' type='DatePicker' showTime={true} {...itemProps} width={itemWidth}
+                  required={false} canEdit={false} itemKey='createdTime' initialValue={record.createdTime||undefined}
+              />
+            </Col>
+            <LabelCol>请假开始时间</LabelCol>
+            <Col colSpan={4}>
+              <FormItem title='请假开始时间' type='DatePicker' {...itemProps} width={itemWidth}
+                itemKey='leaveDateStart' showTime  initialValue={record.leaveDateStart}
+              />
+            </Col>
+            <LabelCol>请假结束时间</LabelCol>
+            <Col colSpan={4}>
+              <FormItem title='请假结束时间' type='DatePicker' {...itemProps} width={itemWidth}
+                 itemKey='leaveDateEnd' showTime  initialValue={record.leaveDateEnd}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>请假天数</LabelCol>
+            <Col colSpan={6}>
+              <FormItem title='请假天数' type='Input' {...itemProps}
+                itemKey='days' initialValue={record.days} width={itemWidth}
+              />
+            </Col>
+            <LabelCol>请假类别</LabelCol>
+            <Col colSpan={6}>
+              <FormItem title='请假类别' type='TreeSelect' {...itemProps} width={itemWidth}
+                itemKey='category' initialValue={record.category} labelKey='name'
+                modelName='leave_categories' searchParam={categorySearchParam}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>请假事由</LabelCol>
+            <Col colSpan={12}>
+              <FormItem title='请假事由' type='TextArea' {...itemProps} width={itemWidth}
+                itemKey='leaveReason' initialValue={record.leaveReason}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>交接内容</LabelCol>
+            <Col colSpan={12}>
+              <FormItem title='交接内容' type='TextArea' {...itemProps} width={itemWidth}
+                itemKey='handOverContent' initialValue={record.handOverContent}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>附件</LabelCol>
+            <Col colSpan={12}>
+              <FormItem title='附件' type='Attachment' {...itemProps} width={itemWidth} required={false}
+                itemKey='_files' link={service.parseRecordUrl(record)} mode={state.mode}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>交接人签字</LabelCol>
+            <Col colSpan={12}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                title='交接人签字' comments={wfservice.getComments(record,"jiaoJieRenYiJian")}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>所在部门意见</LabelCol>
+            <Col colSpan={12}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                title='所在部门意见' comments={wfservice.getComments(record,"buMenYiJian")}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>人资部</LabelCol>
+            <Col colSpan={12}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                title='人资部' comments={wfservice.getComments(record,"renZiBuYiJian")}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>公司分管领导</LabelCol>
+            <Col colSpan={12}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                title='公司分管领导' comments={wfservice.getComments(record,"fenGuanLinDaoYiJian")}
+              />
+            </Col>
+          </Row>
+          <Row>
+            <LabelCol>总经理</LabelCol>
+            <Col colSpan={12}>
+              <FormItem type='CommentRow' {...itemProps} width={itemWidth}
+                title='总经理' comments={wfservice.getComments(record,"zongJingLiYiJian")}
+              />
+            </Col>
+          </Row>
+          <Row>
+          <Col colSpan={12}>
+        
+              1.公司员工请假3天以内，由所在部门负责人审批，人资部会签审批；<br/>
+              2.公司员工请假超过3天，由所在部门负责人审批，人资部会签审批，同时需经公司分管领导审批；<br/>
+              3.公司员工请假超过7天，除履行上述审批手续外，还需经公司总经理批准；<br/>
+
+        
+          </Col>
+          </Row>
+        </Table>
+      </div>
+    </Form>
+	);
+}
+
+export default LeaveForm;

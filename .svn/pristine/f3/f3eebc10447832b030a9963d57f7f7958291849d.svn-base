@@ -1,0 +1,686 @@
+import { request, config, session } from 'utils';
+
+const { api } = config; //取得RESTful api配置信息
+
+//服务接口
+const service = {
+	USER_INFO_VAR: 'xpnUserInfo', //用户信息保存在本地的变量名
+	USER_NAME_VAR: 'xpnUserName', //用户名保存在本地的变量名
+	USER_NAME_VAR_OLD: 'xsfUserName', //老系统用户名保存在本地的变量名
+	ADMIN_PERMISSION_NAME: config.adminPermissionName, //系统管理授权名称
+	userInfo: null, //保存用户登录信息
+	curPath: '/', //当前所处路径
+	siderCollapsed: false, //Sider是否被折叠
+	dispatch: null, //保存webappModel的dispath，用于发送消息
+
+	//根据model获取用户全名
+	getUserFullName : (model) => {
+		return getUserFullName(model);
+	},
+
+	//获取认证后重定向路径
+	getRedirectToPathAfterAuthc : (curPath) => {
+		return getRedirectToPathAfterAuthc(curPath);
+	},
+
+	//判断是否已登录
+	isAuthc : () => {
+		return isAuthc();
+	},
+
+	//判断是否有系统管理授权
+	isAdmin : () => {
+		return isAdmin();
+	},
+
+	//登录
+	login: async (requestParam) => {
+		return login(requestParam);
+	},
+
+	//请求页
+	queryPage: async(url, params, where, sort) => {
+		return queryPage(url, params, where, sort);
+	},
+
+	//请求记录
+	queryRecord: async(url, params) => {
+		return queryRecord(url, params);
+	},
+
+	//创建记录
+	createRecord: async(namespace, record) => {
+		return createRecord(namespace, record);
+	},
+
+	//更新记录
+	updateRecord: async(url, record) => {
+		return updateRecord(url, record);
+	},
+
+	//删除记录
+	deleteRecord: async(record,para) => {
+		return deleteRecord(record,para);
+	},
+
+	//处理记录的关联/链接对象属性
+	processLinkAttrsOfRecord: (record) => {
+		return processLinkAttrsOfRecord(record);
+	},
+
+	//注销
+	logout: async () => {
+		logout();
+	},
+
+  //移除用户信息
+  removeUserInfoFromLocal: () => {
+    removeUserInfoFromLocal();
+  },
+
+	//保存用户信息到本地
+	saveUserInfoToLocal: (userInfo) => {
+		saveUserInfoToLocal(userInfo);
+	},
+
+	//从本地读取用户信息
+	readUserInfoFromLocal: () => {
+		return readUserInfoFromLocal();
+	},
+
+	//从本地读取用户信息
+	readUserNameFromLocal: () => {
+		return readUserNameFromLocal();
+	},
+
+	//检查当前用户是否有权限permission
+	authz: (permission) => {
+		return authz(permission);
+	},
+
+	//发送http请求
+	httprequest: (url, options) => {
+		return httprequest(url, options);
+	},
+
+	//解析rest返回结果
+	parseRestResult: (data) => {
+		return parseRestResult(data);
+	},
+
+	//解析记录的url
+	parseRecordUrl: (record) => {
+		return parseRecordUrl(record);
+	},
+
+  //解析记录的href
+  getHrefOfLinkAttr:(record)=>{
+	  return getHrefOfLinkAttr(record);
+  },
+
+	//解析记录的entityLink，用于附件服务
+	parseEntityLink: (record,isHref=false) => {
+		return parseEntityLink(record,isHref);
+	},
+
+  //从记录中解析Children的RESTful的请求链接
+  parseRecordChildrenUrl:(record) => {
+    return parseRecordChildrenUrl(record);
+  },
+
+	//计算组件的唯一标志，因为一个模型为多个相同组件服务，需要区分不同的组件
+  computeComponentUid: (modelName, searchParam) => {
+  	return computeComponentUid(modelName, searchParam);
+  },
+
+	//取记录的链接属性
+	getRecordLinkAttr: (record, attrName) => {
+		return getRecordLinkAttr(record, attrName);
+	},
+
+	//构造form的属性
+	constructPropsOfForm: (modelName, record, mode, origin) => {
+		return constructPropsOfForm(modelName, record, mode, origin);
+	},
+
+	//取记录的id
+	getRecordId: (record) => {
+		return getRecordId(record);
+	},
+
+	//从记录链接中抽取id
+	extractIdFromRecordHref: (href) => {
+		return extractIdFromRecordHref(href);
+	},
+
+	//自动配置搜索参数
+	autoConfigSearchParam: (param) => {
+		return autoConfigSearchParam(param);
+	},
+
+	//构造jpql
+	constructJpql: (param) => {
+		return constructJpql(param);
+	},
+
+	//构造记录打开jpql
+	constructRecordOpenUrl: (state) => {
+		return constructRecordOpenUrl(state);
+	},
+
+	//获取路由参数
+	getRouteParam: (params) => {
+		return getRouteParam(params)
+	},
+
+	//根据消息类型获取命名空间
+	getNamespace: (actionType) => {
+		return getNamespace(actionType);
+	},
+
+	//如果已经登录，则在请求url中带上token
+	appendTokenInfoToUrl: (url) => {
+		return appendTokenInfoToUrl(url);
+	},
+
+	//获取记录的作者
+	getRecordAuthorInfo: (param) => {
+		return getRecordAuthorInfo(param);
+	},
+
+	//构造记录的url
+	constructRecordUrl: (param) => {
+		return constructRecordUrl(param);
+	},
+
+	//构造请求页参数
+	constructQueryPageParam: (param) => {
+		return constructQueryPageParam(param);
+	},
+
+	//构造导出目录表的url
+	constructCatalogExportUrl: (param) => {
+		return constructCatalogExportUrl(param);
+	},
+
+  //处理记录中的时间
+  formatRecordDate: (record) => {
+    for (let attr in record) {
+      //处理时间类型,有_isAMomentObject 代表是时间的对象
+      if(record[attr]&&record[attr]['_isAMomentObject']){
+        record[attr]=record[attr].format('YYYY-MM-DD HH:mm:ss');
+      }
+    }
+  },
+}
+
+export default service;
+
+//服务实现
+//取登录后跳转路径
+function getRedirectToPathAfterAuthc() {
+	const curPath = service.curPath;
+
+  if (curPath == '/' || curPath == '/login') {
+    return isAdmin() ? '/sysadmin' : '/business';
+  }
+  else
+  	return curPath;
+}
+
+//判断用户是否拥有权限permission
+function authz(permission) {
+	if (permission == null || permission == '' || permission == true ) {
+		return true;
+	}
+
+	const userInfo = service.userInfo;
+	if (userInfo==null) return false;
+	if (!userInfo.permissions) return false;
+
+	const index = userInfo.permissions.findIndex(
+		(value) => (value == permission)
+	);
+
+	return (index >=0);
+}
+
+//判断用户是否已登录
+function isAuthc() {
+	return (service.userInfo != null);
+}
+
+//判断用户是否为管理员
+function isAdmin() {
+	return authz(service.ADMIN_PERMISSION_NAME);
+}
+
+//登录
+function login(requestParam) {
+	const { login } = api; //取得登录api地址
+	return httprequest(login, {
+    method: 'get',
+    data: requestParam
+  });
+}
+
+//请求页
+function queryPage(namespace, params, where, sort) {
+	//构造请求页参数
+	let param = constructQueryPageParam({namespace, params, where, sort});
+	const {url, requestParam} = param;
+
+	//请求数据
+	return httprequest(url, {
+    method: 'get',
+    data: requestParam,
+  });
+}
+
+
+//请求记录数据
+function queryRecord(url, param) {
+	return httprequest(url,{
+    method: 'get',
+    data: param
+	});
+}
+
+//创建记录
+function createRecord(namespace, record) {
+	const { rootPath } = api; //RESTful请求的根路径
+	const url = rootPath+'/'+namespace;
+
+	let param = {
+    method: 'post',
+    data: record
+	}
+
+	return httprequest(url,param);
+}
+
+//更新记录
+function updateRecord(url, record) {
+	let param = {
+    method: 'patch',
+    data: record
+	}
+	return httprequest(url,param);
+}
+
+//删除记录
+function deleteRecord(key,para={}) {
+	let url;
+	if (key instanceof Object)
+		url = parseRecordUrl(key);
+	else
+		url = key;
+
+	return httprequest(url, {
+    method: 'delete',
+    data:para
+  });
+}
+
+//处理记录的关联/链接对象属性
+function processLinkAttrsOfRecord(record) {
+	if (!record._embedded) return record;
+
+	const linkAttrs = record._embedded;
+	for (let attr in linkAttrs) {
+		if (!(linkAttrs[attr] instanceof Array)) //单值
+			record[attr] = getHrefOfLinkAttr(linkAttrs[attr]);
+		else { //多值
+			record[attr] = [];
+			linkAttrs[attr].forEach(
+				item => record[attr].push(getHrefOfLinkAttr(item))
+			);
+		}
+	}
+	return record;
+}
+
+//取记录的链接属性
+function getRecordLinkAttr(record, attrName) {
+	let value = record._embedded && record._embedded[attrName];
+	if (!value&&record[attrName]&&typeof record[attrName]=='object') value = record[attrName];
+	return value;
+}
+
+//取指定链接对象的href
+function getHrefOfLinkAttr(attrObj) {
+
+  if(!attrObj||!attrObj._links||!attrObj._links.self) return '';
+
+	let href = attrObj._links.self.href;
+	if (!attrObj._links.self.templated)
+		return href;
+
+	const index = href.indexOf('{');
+	return href.substring(0, index);
+}
+
+//注销
+function logout() {
+	const { logout } = api; //取得注销api地址
+	return httprequest(logout);
+}
+
+//取用户全名
+function getUserFullName(model) {
+	const anonymous = '匿名用户';
+	if (!model) return anonymous;
+	if (!model.user) return anonymous;
+	return model.user.fullName;
+}
+
+//保存用户信息到本地存储
+function saveUserInfoToLocal(userInfo) {
+	session.setItem(service.USER_INFO_VAR, JSON.stringify(userInfo));
+	//保存登录用户名
+	session.setItem(service.USER_NAME_VAR, userInfo.user.userName, true);
+}
+
+//从本地存储中删除用户信息
+function removeUserInfoFromLocal() {
+	session.setItem(service.USER_INFO_VAR, null);
+}
+
+//从本地存储中读取用户信息
+function readUserInfoFromLocal() {
+	const userInfo = session.getItem(service.USER_INFO_VAR);
+	if (userInfo == null) return null;
+	return JSON.parse(userInfo);
+}
+
+//从本地存储中读取用户信息
+function readUserNameFromLocal() {
+	let userName = session.getItem(service.USER_NAME_VAR, true);
+	if (userName == null) { //兼容老系统
+		userName = session.getCookie(service.USER_NAME_VAR_OLD);
+	}
+	return userName || '';
+}
+
+//解析RESTful的返回数据
+function parseRestResult(data) {
+  if ( data._embedded || data._links) { //是Spring RESTful格式数据
+  	const { page, _links, _embedded, ...rest } = data;
+
+  	let list = [];
+  	if (_embedded) { //有返回列表数据
+  		let key;
+  		for (key in _embedded) break; //取第一个元素即分页数据
+
+  		list = _embedded[key];
+  	}
+
+  	return { list: list, page: page, ...rest };
+  }
+
+  return data;
+}
+
+//从记录中解析RESTful的请求链接
+function parseRecordUrl(record) {
+  if (record._links) { //Spring data rest 返回数据
+  	return record._links.self.href;
+  }
+  if (record.self)
+  	return record.self.href;
+
+  return record._key; //modelTemplate中使用此字段：用于编辑视图
+}
+
+//从记录中解析附件请求的链接
+function parseEntityLink(record,isHref) {
+  const { rootPath } = api; //RESTful请求的根路径
+  if(isHref)
+    return record.replace(rootPath, '');
+	let entityLink = parseRecordUrl(record);
+	return entityLink.replace(rootPath, '');
+}
+
+//从记录中解析Children的RESTful的请求链接
+function parseRecordChildrenUrl(record) {
+	let url = undefined;
+  if (record._links) { //Spring data rest 返回数据
+    if(record._links.children) {
+    	url = record._links.children.href;
+    }
+  }
+
+  if (!url) {
+  	url = parseRecordUrl(record)+'/children';
+  }
+  return url;
+}
+
+// 发送http请求
+function httprequest(url, options) {
+	return request(url, options);
+}
+
+//计算组件的唯一标识
+function computeComponentUid(modelName, searchParam) {
+  return 'uid' + (modelName ? JSON.stringify(modelName) :'') +
+  	(searchParam ? JSON.stringify(searchParam) : '');
+}
+
+//构造form的属性
+function constructPropsOfForm(modelName, record, mode, origin) {
+	const href = parseRecordUrl(record) || modelName;
+	return {
+		modelName,
+		href: href,
+		model : {
+			record: record,
+			state: {
+				mode: mode,
+				origin: origin,
+			}
+		}
+	}
+}
+
+//取记录的id
+function getRecordId(record) {
+	return extractIdFromRecordHref(parseRecordUrl(record))
+}
+
+//从记录链接中抽取id
+function extractIdFromRecordHref(href) {
+	if (!href) return -1;
+	let index = href.lastIndexOf('/');
+	if (index <=0) return -1;
+
+	let id = href.substring(index+1);
+	//查找儿子节点的链接，需要特殊处理
+	if (id.toLowerCase().startsWith('children')) {
+		let newhref = href.substring(0, index);
+		index = newhref.lastIndexOf('/');
+		id = newhref.substring(index+1);
+	}
+
+	return id;
+}
+
+//自动配置搜索参数
+import lodash from 'lodash';
+function autoConfigSearchParam({searchParam, state}) {
+  if (!(searchParam && searchParam.filter && state))
+  	return searchParam;
+
+  //1 从模型中读取参数
+  let {clazz, listJpql, listProjection} = state;
+  if (searchParam.linkAttrs) { //如果请求参数指定了linkAttrs，重新计算jpql
+  	listJpql = constructJpql({clazz, linkAttrs:searchParam.linkAttrs});
+  }
+
+  //2 克隆一个新的搜索参数，以免修改老的搜索参数
+	let newSearchParam = lodash.cloneDeep(searchParam)
+
+	//3 设置投影
+  newSearchParam.projection = newSearchParam.projection||listProjection;
+
+  //4 设置jpql
+  let jpql = searchParam.filter.jpql||listJpql;
+  if (!jpql) return newSearchParam;
+
+  //合并where条件
+  const where = newSearchParam.filter.where;
+	if (where && where != '') {
+		jpql += jpql.toLowerCase().indexOf('where') > 0 ? '' : ' where 1=1'
+		jpql += ' and ('+where+')';
+	}
+	newSearchParam.filter.jpql = jpql;
+	newSearchParam.filter.clazz = clazz;
+
+	newSearchParam.filter.where = undefined;
+  return newSearchParam;
+}
+
+//构造jpql
+function constructJpql({clazz, linkAttrs, joinType='LEFT JOIN FETCH', neverReturnNull=true}) {
+  let jpql = 'select o from '+clazz+' o';
+
+  //如果链接属性为空，则不构造jpql
+  if (neverReturnNull==false && (!linkAttrs || linkAttrs.length == 0))
+  	return null;
+
+  if (!linkAttrs) linkAttrs = [];
+
+  for(let attr of linkAttrs) {
+  	let alias = attr.indexOf('.')>0?attr:'o.'+attr;
+    jpql += ' LEFT JOIN FETCH '+alias+' '+attr.split('.').join('');
+  }
+  return jpql;
+}
+
+//构造记录打开jpql：不带where
+function constructRecordOpenUrl(state) {
+	const {clazz, linkAttrs, joinType, recordOpenJpql, listJpql} = state;
+	if (recordOpenJpql) return recordOpenJpql; //优先返回recordOpenJpql
+	if (listJpql) return listJpql; //其次返回listJpql
+
+	//最后根据模型构造：如果无链接属性，则返回null
+	return constructJpql({clazz, linkAttrs, joinType, neverReturnNull:false});
+}
+
+//获得路由参数
+function getRouteParam({match, paramName}) {
+  if (match && match.params)
+    return match.params[paramName];
+  else
+    return undefined;
+}
+
+//根据消息类型获取命名空间
+function getNamespace(actionType) {
+  if (actionType) {
+    return actionType.split('/')[0];
+  }
+  return '';
+}
+
+//如果已经登录，则在请求url中带上token
+function appendTokenInfoToUrl(url) {
+  if (service.userInfo) {
+    const token = service.userInfo.token;
+    if (token) {
+      url += url.includes('?') ? '&' : '?';
+      url += token.name+'='+token.value;
+    }
+  }
+  return url;
+}
+
+//获取记录的作者
+function getRecordAuthorInfo({record}) {
+	let user = service.userInfo.user;
+	if (!user) return '';
+	let userFullName = user.name+"/"+user.orgFullName;
+	let authorInfo = (record.createdByFullName||userFullName).split('/');
+	return authorInfo[1]+'  '+authorInfo[0];
+}
+
+//构造记录的url
+function constructRecordUrl({modelName, id}) {
+	const { rootPath } = api; //RESTful请求的根路径
+	let url = rootPath+'/'+modelName+'/'+id; //构造打开url
+	return url;
+}
+
+//构造请求页参数
+function constructQueryPageParam({namespace, params, where, sort}) {
+	const { rootPath } = api; //RESTful请求的根路径
+	let url = rootPath+'/'+namespace; //构造请求url
+
+	let requestParam = Object.assign({}, params);
+	requestParam.filter = undefined;
+	requestParam.search = undefined;
+
+	if (sort && sort != '')
+		requestParam.sort = sort;
+
+	if (params.filter) { //指定了过滤接口
+		url += '/filter';
+		Object.assign(requestParam, params.filter);
+		if (where && where != '') {//请求中指定了条件，则合并条件
+			if (requestParam.jpql) {
+				let jpql = requestParam.jpql;
+				jpql += jpql.toLowerCase().indexOf('where') > 0 ? '' : ' where 1=1'
+				requestParam.jpql = jpql+' and '+where;
+			}
+			else {
+				if (!requestParam.where || requestParam.where == '')
+					requestParam.where = where;
+				else
+					requestParam.where = '('+requestParam.where+') and ('+ where+')';
+			}
+		}
+	}
+	else if (params.search && params.search != '') { //指定了查询接口
+		url += '/search/' + params.search;
+	}
+
+	return {url, requestParam};
+}
+
+//构造导出目录表的url
+function constructCatalogExportUrl({model, searchParam, where, templateNo}) {
+  //1 构造当前的查询参数
+  let newSearchParam = autoConfigSearchParam({searchParam, state:model.state});
+
+  //2 构造请求页的查询参数
+  let param = constructQueryPageParam({
+    namespace: model.namespace,
+    params: newSearchParam,
+    where,
+  });
+
+  //3 构造完整url
+  let {url, requestParam} = param;
+  for (let paramName in requestParam) {
+    let paramValue = requestParam[paramName];
+    if (!paramValue) continue;
+    url+= (url.indexOf('?')>0 ? '&' : '?')+paramName+'='+paramValue;
+  }
+
+  //4 构造导出服务url
+  //构造数据源
+  let dataSource = url;
+  dataSource = appendTokenInfoToUrl(dataSource);
+  dataSource = encodeURIComponent(dataSource);
+
+  //构造导出excel服务的url
+  const { rootPath } = api; //RESTful请求的根路径
+  url = rootPath+'/template_excel/service/catalog?';
+  url+='&templateNo='+templateNo;
+  url+='&userId='+service.userInfo.user.id;
+  url+='&datasource='+dataSource;
+  url+='&returnFile=1';
+  url = appendTokenInfoToUrl(url);
+
+  return url;
+}

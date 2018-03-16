@@ -1,0 +1,89 @@
+import React from 'react';
+import {connect} from 'dva';
+import {ModuleLayout} from 'components';
+
+const menuItems = [
+  {
+    path: 'report/yeardemand',
+    icon: 'fork',
+    title: '年度需求预算',
+    expanded: false,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'company/all',
+        icon: 'api',
+        title: '公司年度需求预算'
+      }, {
+        path: 'unit/all',
+        icon: 'layout',
+        title: '单位年度需求预算'
+      }, {
+        path: 'charge/all',
+        icon: 'layout',
+        title: '分管费用年度需求预算'
+      }, {
+        path: 'dept/all',
+        icon: 'layout',
+        title: '部门年度需求预算'
+      }, {
+        path: 'unit/all',
+        icon: 'layout',
+        title: '各单位年度需求预算'
+      }, {
+        path: 'dept/my',
+        icon: 'layout',
+        title: '各部门年度需求预算'
+      }, {
+        path: 'charge/my',
+        icon: 'layout',
+        title: '各分管年度需求预算'
+      }
+    ]
+  }, {
+    path: 'config',
+    icon: 'red-envelope',
+    title: '选项配置',
+    expanded: false,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'dataitemconfig',
+        icon: 'api',
+        title: '数据项定义'
+      }, {
+        path: 'deptcodetable',
+        icon: 'layout',
+        title: '部门编码表'
+      }, {
+        path: 'deptpermissionconfig',
+        icon: 'layout',
+        title: '部门权限定义'
+      }, {
+        path: 'tableconfig',
+        icon: 'layout',
+        title: '表配置'
+      }, {
+        path: 'sheetrow',
+        icon: 'layout',
+        title: '维护UI行定义'
+      }, {
+        path: 'sheetcol',
+        icon: 'layout',
+        title: '维护UI列定义'
+      }
+    ]
+  }
+];
+
+const Layout = (props) => {
+  return (
+  < ModuleLayout trigger siderTitle = '预算管理' siderIcon = 'tool' menu = {
+    menuItems
+  }
+  {
+    ...props
+  } />)
+}
+
+export default Layout;

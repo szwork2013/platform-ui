@@ -1,0 +1,5 @@
+export default from './View';
+//注册公用模型
+import {modelRegister} from 'utils';
+import model from './model';
+modelRegister(model);

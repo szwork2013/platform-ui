@@ -1,0 +1,36 @@
+import React from 'react';
+import { Collapse } from 'antd'
+const Panel = Collapse.Panel;
+
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+
+import service from 'service';
+
+//权限定义表单
+class ExpenditurePaymentForm extends React.Component{
+
+  componentDidMount() {
+
+  }
+
+  render(){
+  //解构参数
+  let {
+    model, //FormContainer注入：模型
+    canEdit = true, //FormContainer注入：是否可编辑
+    ...rest
+  } = this.props;
+  let { record, state } = model;
+
+//显示UI
+  return (
+    <Form layout='inline'>
+     <div>表单</div>
+    </Form>
+  );
+
+  }
+}
+export default ExpenditurePaymentForm;

@@ -1,0 +1,30 @@
+import { ModuleLayout } from 'components';
+
+const menuItems = [
+  {
+    path: 'my',
+    icon: 'edit',
+    title: '我的请假'
+  },
+  {
+    path: 'all',
+    icon: 'bars',
+    title: '所有请假',
+  },
+  {
+    path: 'category',
+    icon: 'fork',
+    title: '请假类型',
+    permission: 'leave.admin',
+  },
+];
+
+const Layout = ( props ) => {
+  return (
+    <ModuleLayout trigger siderTitle='请假' siderIcon='mail' menu={menuItems} {...props} />
+  )
+}
+
+export default Layout;
+
+

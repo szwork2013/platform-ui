@@ -1,0 +1,21 @@
+import { Col } from 'antd'
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Row = FormContainer.StyledRow;
+
+import service from 'service';
+
+const DoneSection = ({
+      record
+}) => {
+ let user=service.getRecordLinkAttr(record,'modifiedBy');
+  return(
+    <div>
+      <Row>
+        <Col span={3}>办结时间:</Col>
+        <Col span={21}>{record.settleTime}</Col>
+      </Row>
+     </div>
+  )
+}
+export default DoneSection;

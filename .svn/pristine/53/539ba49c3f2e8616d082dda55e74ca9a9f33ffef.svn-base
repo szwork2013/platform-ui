@@ -1,0 +1,152 @@
+import React from 'react';
+import {
+  Input,
+  Checkbox,
+  InputNumber,
+  DatePicker,
+  Alert,
+  Button
+} from 'antd';
+import {ModuleLayout, Tree, View, DropdownSelect} from 'components';
+
+import modelDefinition from '../../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+let deptId = undefined;
+class ViewComponent extends React.Component {
+
+  render() {
+    const props = this.props;
+    //定义操作条属性
+    const actionBarProps = {
+      new: false, //显示新增按钮
+      delete: false, //显示删除按钮
+      newRow: false,
+      search: false
+    }
+    const isOverdueRender = (text, record) => {
+      if (record.state === 'END') {
+        return <Button type="primary">已办结</Button>;
+      } else {
+        let isOverdue = record.taskState.overdue;
+        if (isOverdue) 
+          return <Alert message="是" type="warning" showIcon/>;
+        else 
+          return <Alert message="否" type="success" showIcon/>;
+        }
+      }
+
+    const isFeedbackRender = (text, record) => {
+      if (record.state === 'END') {
+        return <Button type="primary">已办结</Button>;
+      } else {
+        let isFeedback = record.taskState.feedback;
+        if (isFeedback) 
+          return <Alert message="是" type="success" showIcon/>;
+        else 
+          return <Alert message="否" type="warning" showIcon/>;
+        }
+      }
+
+    const remainingTimeRender = (value,record) =>{
+      if (record.state === 'END') {
+        return <Button type="primary">已办结</Button>;
+      }else{
+        if(value >= 10){
+          return <Alert message={`${value}天`} type="success" showIcon/>;
+        }else if(value < 10 && value >= 1){
+          return <Alert message={`${value}天`} type="warning" showIcon/>;
+        }else{
+          if(value === 0){
+            return <Alert message={`${value}天`} type="error" showIcon/>;
+          }else{
+            return <Alert message={`逾期${-value}天`} type="error" showIcon/>;
+          }
+        }
+      }
+    }
+    //定义列表属性
+    const listProps = {
+      columns: [
+        {
+          title: '流水号',
+          dataIndex: 'sortNo',
+          key: 'sortNo',
+          width: 100
+        }, {
+          title: '任务名称',
+          dataIndex: 'name',
+          key: 'name',
+          link: 'view',
+          width: 230
+        }, {
+          title: '责任部门',
+          dataIndex: 'deptName',
+          key: 'deptName',
+          link: 'view',
+          width: 100
+        }, {
+          title: '本周反馈',
+          dataIndex: 'lastLog',
+          key: 'lastLog',
+          link: 'view'
+        }, {
+          title: '本周是否已反馈',
+          dataIndex: 'isFeedback',
+          key: 'isFeedback',
+          textRender: isFeedbackRender,
+          width: 120
+        }, {
+          title: '是否逾期',
+          dataIndex: 'isOverdue',
+          key: 'isOverdue',
+          textRender: isOverdueRender,
+          width: 120
+        }, {
+          title: '剩余时间',
+          dataIndex: 'remainingTime',
+          key: 'remainingTime',
+          render: remainingTimeRender,
+          width: 170
+        }
+      ],
+      // rowActions:[   { title:'删除', type:'deleteRow' },   { title:'查看', type:'open'
+      // }, ],remainingTime
+    };
+    //翻页器属性
+    const paginationBarProps = {
+      pagination: true
+    };
+    //定义过滤条件
+    const searchParam = {
+      filter: undefined,
+      search: 'getTaskList',
+      size: 60, //指定每页记录数
+      //排序规则：sortNo升序
+      alias: 'f',
+      sort: 'f.state asc, f.sortNo asc',
+      state: 'in (2,3,4)',
+      deptId:undefined,
+      type:'= 0'
+    };
+    return (
+      <div style={{padding: '1px', marginTop:'-30px'}}>
+        <View {...props} 
+          key={modelName + 'ViewLayout'} 
+          modelName={modelName} //模型名称
+          searchParam={searchParam} 
+          actionBar={actionBarProps} //操作条定义
+          list={listProps} //列表定义
+          paginationBar={true} //翻页器定义
+          heightOffset={-10}
+        />
+    </div>)
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import {connect} from 'dva';
+export default connect(({tasks, loading, apptabs: {
+    tabs
+  }}) => ({tasks, loading: loading.models[modelName], tabs}))(ViewComponent);

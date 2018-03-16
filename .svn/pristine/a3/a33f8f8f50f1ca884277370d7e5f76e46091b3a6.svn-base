@@ -1,0 +1,149 @@
+import React from 'react';
+import { Input, InputNumber, Checkbox, DatePicker, Select} from 'antd';
+import {
+  ModuleLayout,
+  Tree,
+  View,
+  DropdownSelect,
+} from 'components';
+const Option = Select.Option;
+import service from 'service';
+import modelDefinition from '../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+class ViewComponent extends React.Component {
+
+  render() {
+    const props = this.props;
+
+    //定义操作条属性
+    const actionBarProps = {
+      new: false, //显示新增按钮
+      delete: false, //显示删除按钮
+      newRow: true,
+      newPayloadRender: () => {return {processNo:'taskworkflow'}},
+      saveTablePayloadRender: (model) => (
+        {defaultValues: {sortNo: '1'}}
+      )
+    }
+    let switchTab = undefined;
+    let sortNo = 1;
+    const sortNoRender = (text,record) =>{
+      if(!switchTab){
+        switchTab = record.deptName;
+      }
+      if(switchTab !== record.deptName){
+        switchTab = record.deptName;
+        sortNo = 1;
+      }
+      return sortNo++;
+    }
+    //定义列表属性
+    const listProps = {
+      columns:[ // 和antd table组件的列定义相同
+        {type:'select',title: '部门', dataIndex: 'dept', key: 'dept',
+          fulltext: false,
+          editor:<DropdownSelect {...this.deptTreeProps()} />,
+          textRender:this.deptRender,
+          width:80
+        },
+        { title: '序号', dataIndex: 'sortNo', key: 'sortNo', width:60, render:sortNoRender},
+        { title: '任务名称', dataIndex: 'name', key: 'name', editor:<Input.TextArea/>, width:180},
+        { title: '任务描述', dataIndex: 'description', key: 'description', editor:<Input.TextArea/>},
+        {type:'select', title: '任务类型', dataIndex: 'type', key: 'type', width:100,
+          editor:<DropdownSelect {...this.typeTreeProps()} />,
+          textRender:this.typeTextRender},
+        {type:'date', title: '完成期限', dataIndex: 'deadline', key: 'deadline', width:150,
+          editor:<DatePicker allowClear={false} />}
+      ],
+      // rowSelection: {},
+    };
+
+    //翻页器属性
+    const paginationBarProps = {};
+
+    //定义过滤条件
+    const searchParam = {
+      filter: { //过滤规则
+        where: `1=1`, //条件
+      },
+      size: 30, //指定每页记录数
+      //排序规则：sortNo升序
+      sort: ['o.dept.id,asc'],
+    };
+
+    return (
+      <View key={modelName+'ViewLayout'} {...props}
+        searchParam={searchParam}
+        modelName={modelName} //模型名称
+        editMode='row' //编辑模式：单行编辑
+        actionBar={actionBarProps} //操作条定义
+        paginationBar={paginationBarProps} //翻页器定义
+        list={listProps} //列表定义
+      />
+    )
+  }
+
+  //部门列造函数
+  deptRender(value, record) {
+    let href;
+    if (record.deptId)
+      href = service.constructRecordUrl({modelName:'orgs', id:record.deptId});
+    record.dept = record.dept?record.dept:href;
+    return record.deptName;
+  }
+  typeTextRender(value,record){
+    value = value + '';
+    if(value === '0'){
+      record.type = '0';
+      return '年度任务';
+    }else if(value === '1'){
+      record.type = '1';
+      return '周任务';
+    }
+  }
+  //分类列造函数
+  categoryRender(value, record) {
+    let href;
+    if (record.categoryId)
+      href = service.constructRecordUrl({modelName:'task_categorys', id:record.categoryId});
+
+    record.category = record.category?record.category:href;
+    return record.categoryName;
+  }
+
+  //构造机构树的属性
+  deptTreeProps(){
+    const props = props;
+    const treeProps = {
+      type:'list',
+      labelKey: 'orgName',
+      modelName: 'orgs',
+      searchParam: {
+        filter: {
+          where:'o.type=2'
+        },
+        sort: ['o.sortNo,asc'],
+      },
+    };
+    return treeProps;
+  }
+  //构造任务分类树的属性
+  typeTreeProps(){
+    const props = props;
+    const treeProps = {
+      type:'list',
+      labelKey: 'name',
+      options:[{id:'0',name:'年度任务'},{id:'1',name:'周任务'}]
+    };
+    return treeProps;
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({tasks, loading, apptabs:{tabs}}) =>
+  ({tasks, loading: loading.models[modelName], tabs})
+)(ViewComponent);

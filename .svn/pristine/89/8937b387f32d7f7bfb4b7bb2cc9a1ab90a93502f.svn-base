@@ -1,0 +1,108 @@
+import React from 'react';
+import {Collapse, Tabs, Icon, Badge,Button} from 'antd';
+const Panel = Collapse.Panel;
+const TabPane = Tabs.TabPane;
+
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+
+import service from 'service';
+import config from 'config';
+
+import TitleSection from '../../../common/TitleSection';
+import PlanContent from '../../../common/PlanContent';
+import PlanItems from '../../../common/PlanItems';
+
+//权限定义表单
+class DemandPlanForm extends React.Component{
+
+  componentDidMount() {
+
+  }
+
+  render(){
+  //解构参数
+  let {
+    model, //FormContainer注入：模型
+    canEdit = true, //FormContainer注入：是否可编辑
+    getFieldDecorator,
+    setFieldsValue,
+    dispatch,
+    formCanEdit,
+    ...rest,
+  } = this.props;
+  let { record, state } = model;
+
+
+    canEdit=canEdit?formCanEdit:false;
+    //构造FormItem的公共参数
+    const itemProps = { canEdit, required: canEdit,
+      getFieldDecorator, setFieldsValue,
+    };
+    const itemWidth = ['96%','10%','90%'];
+    const twoItemWidth = ['48%','20%','80%'];
+    const threeItemWidth = ['32%', '30%', '70%'];
+    const fourItemWidth = ['24%', '40%', '60%'];
+
+    //设置数字格式
+    const inputNumberProps = {
+      precision:0,
+      size: 'medium',
+    }
+
+    //处理现实部门的信息
+    let org=service.getRecordLinkAttr(record,'org');
+    record.orgName=(org&&org.orgName)||'';
+
+    let planContentProp={record,canEdit,getFieldDecorator,setFieldsValue,dispatch};
+    const user = service.userInfo.user;
+    let planItemsProp={record,canEdit,dispatch,year:record.year,type:record.type,planType:record.orgLevel}
+//显示UI
+  return (
+    <Tabs tabPosition='top'>
+      <TabPane tab={<span><Icon type="solution"/>表单</span>} key="1">
+        <Form layout='inline'>
+          <div style={{display:'none'}}>
+            <FormItem type='Input' {...itemProps}
+                      title='物资类型' itemKey='type' initialValue={record.type||0}
+            />
+            <FormItem type='Input' {...itemProps}
+                      title='机构' itemKey='org' initialValue={record.org||config.API+'/orgs/'+user.org.id}
+            />
+            <FormItem type='Input' {...itemProps}
+                      title='机构类型' itemKey='orgLevel' initialValue={record.orgLevel}
+            />
+          </div>
+          <TitleSection title={!canEdit?
+            (record.year+'年'+record.month+'月'+record.batchNo+'批次公司IT耗材需求计划审批单')
+            :'公司IT耗材需求计划审批单'}/>
+          <PlanContent {...planContentProp}></PlanContent>
+          <PlanItems {...planItemsProp}/>
+        </Form>
+      </TabPane>
+      <TabPane  key="2"
+                tab={<span><Icon type="file-text"/>批阅意见</span>}
+      >
+        <Form layout='inline'>
+          <div>意见</div>
+        </Form>
+      </TabPane>
+      <TabPane  key="3"
+                tab={<span><Icon type="file"/>附件</span>}
+      >
+        <Form layout='inline'>
+          <Row>
+              <FormItem title='附件' type='Attachment' {...itemProps}
+                        itemKey='_files' link={service.getHrefOfLinkAttr(record)} mode={state.mode}
+                        multiple  width={itemWidth}
+              />
+          </Row>
+        </Form>
+      </TabPane>
+    </Tabs>
+  );
+  }
+}
+export default DemandPlanForm;

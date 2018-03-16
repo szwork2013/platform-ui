@@ -1,0 +1,61 @@
+import {Row, Col, Icon} from 'antd';
+
+//结果统计信息
+const ResultStatInfo = ( props ) => {
+	//解构参数
+	let {
+		conditionData,
+    statInfo,
+    height,
+	} = props;
+
+	//计算是否可以起草申请
+  let canStart = conditionData.category&&conditionData.year&&conditionData.fundSource;
+  if (conditionData&&conditionData.expenditureType!='operating') {
+    canStart = conditionData.category&&conditionData.fundSource;
+  }
+
+  //获取统计数据
+	let {
+		fundSourceBudget:{pay:fundSourcePay=0, apply:fundSourceApply=0} = {},
+		deptOrCompBudget:{pay:pay=0, apply:apply=0} = {}
+	} = statInfo;
+
+	let fundSource = conditionData.fundSource || {};
+	let category = conditionData.category || {};
+
+	//计算背景色
+	let borderStyle = '#108ee9 1px solid';
+	if (!canStart) borderStyle = '#e9e9e9 1px solid';
+
+	let textColor = '#666';
+	//if (!canStart) textColor = '#e9e9e9';
+
+	//显示UI
+  return (
+	  <div className='xpnui-layout-border'
+	  	style={{
+	  		marginBottom:5, 
+	  		marginLeft:5, height, 
+	  		border:borderStyle,
+	  		padding:'2px'
+	  	}}
+	  >
+  		<Row style={{paddingLeft:5,color:textColor}}>
+				<Col style={{float:'left' }}>
+					<Icon style={{paddingRight:5}} type='dot-chart'/>
+					公司整体：申请{apply}元 / 已支付{pay}元
+				</Col>
+
+				<Col style={{paddingLeft:20,float:'left' }}>
+					<Icon style={{paddingRight:5}} type='bar-chart'/>
+					{fundSource.name||'***'}：申请{fundSourceApply}元 / 已支付{fundSourcePay}元
+				</Col>
+  		</Row>
+
+  		
+	  </div>
+  )
+}
+
+export default ResultStatInfo;

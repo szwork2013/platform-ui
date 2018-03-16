@@ -1,0 +1,77 @@
+import { message } from 'antd';
+import { modelTemplate } from 'utils';
+
+import service from 'service';
+import config from 'config';
+
+//权限模型定义
+const namespace = {
+  name: 'plan_item',
+  title:'需求计划项',
+  clazz: 'PlanItem', //模型对应的后台实体类
+  linkAttrs:[]
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+    },
+    size: 100, //指定每页记录数
+    sort: 'o.id,asc' //缺省排序规则
+  },
+  titleRender: (record)=>'',
+  effects: {
+    //表单消息：打开支付标签
+    *addRows ({type,payload}, { call, put,select }) {
+      //结构参数
+      let { rows,dataKey,planUrl,foreignKey,}=payload;
+      if(!rows)return;
+
+      const namespace = service.getNamespace(type);
+
+      let state = yield select(state=>state[namespace]);
+      let viewData = service.getViewData(state, dataKey);
+      let list = viewData.list;
+
+      let viewEditState=true;
+      //创建行
+      for(let index=0;index<rows.length;index++){
+        viewEditState=new Date().getTime()+index;
+        let item=rows[index];
+        let materialType=item.type;
+        if(materialType=='LABOUR_SUPPLIES'||materialType==6){
+          let inventory= yield call(service.updateRecord,
+            config.API+'/material_inventory/find_by_material?materialId='+
+            service.extractIdFromRecordHref(service.getHrefOfLinkAttr(item)),{});
+          if(!inventory) {
+            message.warn(item.name+'库存不存在，请先入库！');
+            continue;
+          }
+          if(inventory.number<=0) {
+            message.warn(item.name+'库存不够，请先入库！');
+            continue;
+          }
+        }
+        let newRow={material:service.getHrefOfLinkAttr(item),
+          materialData:item,materialSupplier:item.supplier,
+          demandQuantity:1,
+          remark:item.remark,
+          _isNew: true, _key: new Date().getTime()+index
+        };
+        newRow[foreignKey]=planUrl;
+        //原來有的不添加；
+        if(!list) list=[];
+        let oldRow=list.find(r=>r.materialData.id==item.id||r.materialId==item.id);
+        if(!oldRow)
+          list.push(newRow);
+      }
+
+      yield put({
+        type: 'save', payload: {dataKey,viewEditState}
+      })
+    },
+
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

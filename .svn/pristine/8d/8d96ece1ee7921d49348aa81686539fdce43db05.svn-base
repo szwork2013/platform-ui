@@ -1,0 +1,544 @@
+import React from 'react';
+import { Button,Checkbox} from 'antd'
+import UserBankInfoSelect from '../../UserBankInfoSelect';
+import PayeeSelect from '../../PayeeSelect';
+
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+
+import {
+  StyledTable as Table, 
+  StyledTr as Row,
+  StyledLabelTd as LabelCol,
+  StyledTd as Col,
+} from '../../../../styled';
+
+import service from 'service';
+import wfservice from 'wfservice';
+
+//权限定义表单
+class PaymentSection extends React.Component{
+  //构造函数：初始化组件
+  constructor(props) {
+    super(props);
+    //解构参数
+    const {record} = props;
+
+    //初始化是否是外部收款人
+    record._out = record.outerPayee&&record.outerPayee!=''&&record.outerPayee!=undefined ? true: false;
+
+    //处理内部收款人账户信息
+    record._innerPayee = service.getRecordLinkAttr(record, 'innerPayee');
+
+    //处理外部收款人账户信息
+    record._outerPayee = service.getRecordLinkAttr(record, 'outerPayee');
+  }
+
+  componentDidMount() {
+    let {
+      record, //FormContainer注入：模型
+      setTodosInPayment,
+    } = this.props;
+    setTodosInPayment(record);
+  }
+
+  render() {
+    //1 解构参数
+    let {
+      index,
+      mode, //编辑模式
+      modelName,
+      record,
+      payedMoney,
+      payMoney,
+      paymentSeq,
+      canEdit = true, //FormContainer注入：是否可编辑
+      dispatch,
+      getFieldDecorator,
+      setFieldsValue,
+      formCanEdit,
+    } = this.props;
+
+    //获取当前用户名
+    const userName = service.userInfo.user.name;
+
+    let expenditureExcution = record.execution;
+
+    //当从立项报账的时候，立项信息在execution字段上
+    if (!expenditureExcution) {
+      expenditureExcution = service.getRecordLinkAttr(record, 'expenditureExcution');
+    }
+    let budget = expenditureExcution.budget;
+    let executionType = expenditureExcution.type;  //立项类型 1：费用 2合同
+
+    //合同的话以中标价格为准。
+    if(executionType == 2){
+      budget=expenditureExcution.biddingresultMoney;
+      if(expenditureExcution.settlement&&expenditureExcution.settlement>0)
+        budget=expenditureExcution.settlement;
+      if(expenditureExcution.approve&&expenditureExcution.approve>0)
+        budget=expenditureExcution.approve;
+    }
+
+    //如果是主记录就是需要保存的记录
+    let active = record.active;
+
+    let maxMoney = budget;
+    if (active && mode === 'new') {
+      //处理只能填写的最大金额
+      maxMoney = budget - payMoney;
+    }
+    let createdBy = service.getRecordLinkAttr(record, 'createdBy');
+    let paymentProp = service.getRecordLinkAttr(record, 'paymentProp');
+
+    //2 构造FormItem的公共参数
+    let itemCanEdit = active ? formCanEdit : false;
+    const itemProps = {canEdit: itemCanEdit, setFieldsValue, getFieldDecorator};
+
+    const oneItemWidth = ['100%', '0%', '100%'];
+    const twoItemWidth = ['100%', '0%', '100%'];
+    const threeItemWidth = ['100%', '0%', '100%'];
+    const checkBoxwidth = ['120px', '0px', '120px'];
+
+    //处理新增默认第一次支付和第n次支付。
+    let seq = record.paymentSeq;
+    if (!record.paymentSeq) {
+      seq = paymentSeq;
+    }
+
+    //计算支付比率
+    let paymentRate = record.paymentRate;
+    if (budget && budget > 0 && itemCanEdit && record.paymentMoney && record.paymentMoney > 0) {
+      paymentRate = (record.paymentMoney / budget);
+      paymentRate = paymentRate * 100;
+      paymentRate = paymentRate.toFixed(2);
+    }
+
+    //计算付款进度
+    let paySchedule = 0;
+    let payedSchedule = 0;
+    if (budget && budget > 0) {
+      paySchedule = payedMoney / budget;
+
+      //计算已付比率
+      payedSchedule = paySchedule;
+      payedSchedule = payedSchedule * 100;
+      payedSchedule = payedSchedule.toFixed(2);
+
+      if (record.paymentMoney && record.paymentMoney > 0)
+        paySchedule = (payedMoney + record.paymentMoney) / budget;
+      paySchedule = paySchedule * 100;
+      paySchedule = paySchedule.toFixed(2);
+    }
+
+    //打印需要的相关数据
+    //已付比率
+    record._payedSchedule = payedSchedule + '%';
+    //累计比率
+    record._totalSchedule = paySchedule + '%';
+    //已付金额
+    record._payedMoney = payedMoney;
+
+    //处理收款人信息
+    let _payee = (record._out ? record._outerPayee : record._innerPayee)||{};
+    record._payee = _payee;
+
+    //设置数字格式
+    const inputNumberProps = {
+      precision:2,
+      size: 'medium',
+      formatter: (value) => {
+        return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      }
+    }
+
+    const disabledProps = {disabled:true}
+
+    //显示UI
+    return (
+      <Table>
+        <Row style={{display: 'none'}}>
+          <FormItem type='Input' {...itemProps} width={threeItemWidth} controlProps={{onClick: ()=>this.selectPayeeInfo(_payee)}}
+                    title='内部收款人' itemKey={active ? ('innerPayee') : 'innerPayee' + index}
+                    initialValue={record.innerPayee} placeholder='' required={false}
+          />
+          <FormItem type='Input' {...itemProps} width={threeItemWidth} controlProps={{onClick: ()=>this.selectPayeeInfo(_payee)}}
+                    title='外部收款人' itemKey={active ? ('outerPayee') : 'outerPayee' + index}
+                    initialValue={record.outerPayee} placeholder='' required={false}
+          />
+          <FormItem title='支付次序' type='InputNumber' {...itemProps} width={threeItemWidth}
+                    itemKey={active ? ('paymentSeq') : 'paymentSeq' + index} initialValue={seq}
+                    controlProps={{
+                      formatter: (value) => {
+                        if (value != undefined) return '第' + value + '次支付'; else return '第1次支付';
+                      }
+                    }}
+                    canEdit={false}
+          />
+        </Row>
+        <Row>
+          <LabelCol>支付比例</LabelCol>
+          <Col>
+            <FormItem title='支付比例' type='InputNumber' {...itemProps} width={threeItemWidth}
+                      itemKey={active ? ('paymentRate') : 'paymentRate' + index} initialValue={paymentRate}
+                      controlProps={{
+                        formatter: (value) => {
+                          if (value && value > 0) return value + '%'; else return '';
+                        }
+                      }}
+                      canEdit={false} max={100} placeholder=' '
+            />
+          </Col>
+          <LabelCol>付款进度</LabelCol>
+          <Col>
+            <FormItem title='付款进度' type='InputNumber' {...itemProps} width={threeItemWidth}
+                      itemKey={active ? ('paySchedule') : 'paySchedule' + index} initialValue={paySchedule}
+                      controlProps={{
+                        formatter: (value) => {
+                          if (value && value > 0) return value + '%'; else return '';
+                        }
+                      }}
+                      canEdit={false} max={100} placeholder=' '
+            />
+          </Col>
+          <LabelCol>付款编号</LabelCol>
+          <Col>
+            <FormItem title='付款编号' type='Input' {...itemProps} width={threeItemWidth}
+                      itemKey={active ? ('paymentCode') : 'paymentCode' + index} initialValue={record.paymentCode}
+                      canEdit={false} placeholder=' '
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>支付金额（元）</LabelCol>
+          <Col>
+            <FormItem title='支付金额' type='InputNumber' {...itemProps} width={threeItemWidth}
+                      itemKey={active ? ('paymentMoney') : 'paymentMoney' + index} initialValue={record.paymentMoney}
+                      max={maxMoney} controlProps={{...inputNumberProps}}
+            />
+          </Col>
+          <LabelCol>单据张数</LabelCol>
+          <Col>
+            <FormItem title='单据份数' type='InputNumber' {...itemProps} width={threeItemWidth}
+                    itemKey={active ? ('billCount') : 'billCount' + index} initialValue={record.billCount}
+            />
+          </Col>
+          <LabelCol>付款性质</LabelCol>
+          {executionType == 2&&itemCanEdit&&
+          <Col>
+            <FormItem title='付款性质' type='Select' {...itemProps}
+                      width={threeItemWidth}
+                      itemKey={active ? ('paymentProp') : 'paymentProp' + index} initialValue={record.paymentProp}
+                      required={false}  modelName={'expenditure_paymentprop'}
+                      searchParam={{
+                      filter:{
+                        jpql:'select o from  PaymentProp o'
+                      },
+                      clazz:'PaymentProp',
+                      size:1000,
+                      sort: 'o.sortNo,asc'
+                    }}
+            />
+          </Col>
+          }
+          {executionType == 2&&!itemCanEdit&&
+          <Col>
+            <FormItem title='付款性质' type='Input' {...itemProps}
+                      width={threeItemWidth}
+                      itemKey={active ? ('_paymentProp') : '_paymentProp' + index} initialValue={record.paymentPropText||(paymentProp&&paymentProp.name)}
+                      required={false}
+            />
+          </Col>
+          }
+          {executionType == 1&&
+          <Col></Col>
+          }
+        </Row>
+        <Row>
+          <LabelCol>申请支付文件</LabelCol>
+          <Col colSpan={5}>
+            <FormItem title='申请支付文件' type='Attachment' {...itemProps} width={oneItemWidth}
+              itemKey='_paymentAttachment' link={service.parseRecordUrl(record)} mode={active ? mode : ''}
+              multiple required={false}
+            />
+          </Col>
+        </Row>
+        {expenditureExcution.type != 2 &&
+        <Row>
+          <LabelCol>收款人</LabelCol>
+          <Col colSpan={itemCanEdit?3:5}>
+            <FormItem type='Input' {...itemProps} width={['50%','0%','100%']} canEdit={active&&itemCanEdit}
+              title='收款人' itemKey={active ? ('_payeeName') : '_payeeName' + index}
+              initialValue={_payee.name} required={active&&itemCanEdit}
+              controlProps={disabledProps}
+            />
+            <FormItem title='联系电话' type='Input' {...itemProps} width={['225px','85px','140px']} canEdit={false}
+              itemKey={active ? ('_telephone') : '_telephone' + index} initialValue={_payee.telephone}
+              required={false}
+            />
+          </Col>
+          {itemCanEdit&&
+          <Col colSpan={2}>
+            <FormItem type='Checkbox' required={false} width={checkBoxwidth} title='外部收款人' itemKey='_out' {...itemProps} initialValue={record._out}
+              controlProps={{
+                onChange:(e)=> {
+                  if (e.target.checked) {
+                    //清除内部收款人
+                    setFieldsValue({
+                      innerPayee: null,
+                      _innerPayee: null,
+                      _payeeName: null,
+                      _telephone: null,
+                      _payeeBank: null,
+                      _payeeBankno: null,
+                    });
+                    record._innerPayee = null;
+                    record.innerPayee = null;
+                  }else{
+                    //清除外部收款人
+                    setFieldsValue({
+                      outerPayee: null,
+                      _outerPayee: null,
+                      _payeeName: null,
+                      _telephone: null,
+                      _payeeBank: null,
+                      _payeeBankno: null,
+                    });
+                    record._outerPayee = null;
+                    record.outerPayee = null;
+                  }
+                }
+              }}
+            />
+            <Button type="primary" onClick={this.selectPayeeInfo}>选择收款人</Button>
+          </Col>
+          }
+        </Row>
+        }
+        {expenditureExcution.type != 2 &&
+        <Row>
+          <LabelCol>收款人开户银行</LabelCol>
+          <Col colSpan={2}>
+            <FormItem type='Input' {...itemProps} width={threeItemWidth} canEdit={active&&itemCanEdit}
+              title='收款人开户银行' itemKey={active ? ('_payeeBank') : '_payeeBank' + index}
+              initialValue={_payee.bank} required={active&&itemCanEdit}
+              controlProps={disabledProps} 
+            />
+          </Col>
+          <LabelCol>收款人银行账号</LabelCol>
+          <Col colSpan={2}>
+            <FormItem type='Input' {...itemProps} width={threeItemWidth} canEdit={active&&itemCanEdit}
+              title='收款人银行账号' itemKey={active ? ('_payeeBankno') : '_payeeBankno' + index}
+              initialValue={_payee.bankno} required={active&&itemCanEdit}
+              controlProps={disabledProps}
+            />
+          </Col>
+        </Row>
+        }
+        <Row style={{display: executionType == 1 ? '' : 'none'}}>
+          <LabelCol>报销明细</LabelCol>
+          <Col colSpan={5}>
+            <FormItem title='报销明细' type='TextArea' {...itemProps} width={oneItemWidth}
+                    itemKey={active ? ('paymentDetail') : 'paymentDetail' + index} initialValue={record.paymentDetail}
+                    required={false} controlProps={{autosize:{maxRows: 6}}}
+            />
+          </Col>
+        </Row>
+        <Row style={{display: executionType == 2 ? '' : 'none'}}>
+          <LabelCol>付款依据</LabelCol>
+          <Col colSpan={5}>
+            <FormItem title='付款依据' type='TextArea' {...itemProps} width={oneItemWidth}
+                    itemKey={active ? ('paymentReason') : 'paymentReason' + index} initialValue={record.paymentReason}
+                    required={false} controlProps={{autosize:{maxRows: 6}}}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>备注</LabelCol>
+          <Col colSpan={5}>
+            <FormItem title='备注' type='TextArea' {...itemProps} width={oneItemWidth} required={false}
+                    itemKey={active ? ('remark') : 'remark' + index} initialValue={record.remark}
+                    controlProps={{autosize:{maxRows: 3}}}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>经办人</LabelCol>
+          <Col colSpan={2}>
+            <FormItem title='经办人' type='Input' {...itemProps} width={threeItemWidth} required={false}
+                    itemKey={active ? ('_create') : '_create' + index} initialValue={createdBy && createdBy.name}
+                    canEdit={false} placeholder=' '
+            />
+          </Col>
+          <LabelCol>经办人申请时间</LabelCol>
+          <Col colSpan={2}>
+            <FormItem title='经办人申请时间' type='Input' {...itemProps} width={threeItemWidth} required={false}
+                    itemKey={active ? ('_createTime') : '_createTime' + index} initialValue={record.createdTime}
+                    canEdit={false} placeholder=' '
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>经办部门负责人审批</LabelCol>
+          <Col colSpan={5}>
+            <FormItem type='CommentRow' {...itemProps} width={oneItemWidth}
+                    title='经办部门负责人审批' comments={wfservice.getComments(record, "bumenyijian")}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>职能部门审批</LabelCol>
+          <Col colSpan={5}>
+            <FormItem type='CommentRow' {...itemProps} width={oneItemWidth}
+                    title='职能部门审批' comments={wfservice.getComments(record, "guikoubumenyijian")}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>会签意见</LabelCol>
+          <Col colSpan={5}>
+            <FormItem type='CommentRow' {...itemProps} width={oneItemWidth}
+                    title='会签意见' comments={wfservice.getComments(record, "huiqianyijian")}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>月度预算检查</LabelCol>
+          <Col colSpan={5}>
+            <FormItem type='CommentRow' {...itemProps} width={oneItemWidth}
+                    title='月度预算检查' comments={wfservice.getComments(record, "yusuanjianchayijian")}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>财务审核意见</LabelCol>
+          <Col colSpan={5}>
+            <FormItem type='CommentRow' {...itemProps} width={oneItemWidth}
+                    title='财务审核意见' comments={wfservice.getComments(record, "caiwuyijian")}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>经营部意见</LabelCol>
+          <Col colSpan={5}>
+            <FormItem type='CommentRow' {...itemProps} width={oneItemWidth}
+                    title='经营部意见' comments={wfservice.getComments(record, "jingyingbuyijian")}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>总会计师意见</LabelCol>
+          <Col colSpan={5}>
+            <FormItem type='CommentRow' {...itemProps} width={oneItemWidth}
+                    title='总会计师意见' comments={wfservice.getComments(record, "zongkuaiyijian")}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>分管副总经理审批</LabelCol>
+          <Col colSpan={5}>
+            <FormItem type='CommentRow' {...itemProps} width={oneItemWidth}
+                    title='分管副总经理审批' comments={wfservice.getComments(record, "fenguanlingdaoyijian")}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>总经理审批</LabelCol>
+          <Col colSpan={5}>
+            <FormItem type='CommentRow' {...itemProps} width={oneItemWidth}
+                    title='总经理审批' comments={wfservice.getComments(record, "zongjingliyijian")}
+            />
+          </Col>
+        </Row>
+      </Table>
+    );
+  }
+
+  //选择收款人
+  selectPayeeInfo = (_payee) => {
+    //1 解构参数
+    let {
+      modelName,
+      record,
+      setFieldsValue,
+      dispatch,
+    } = this.props;
+
+    //获取当前用户名
+    const userName = service.userInfo.user.name;
+    let where = 'o.user.name=\''+userName+'\'';
+    if (service.isAdmin()) where = '1=1';
+
+    const formProps = service.constructPropsOfForm(modelName, record);
+    if(record._out==undefined||record._out==false){//若外部复选框未选中 弹出本人银行信息进行选择
+      record._outerPayee=undefined;
+      record.outerPayee=undefined;
+      _payee={};
+      let searchParam={ //搜索条件
+        filter: {
+          where,
+        },
+        size: 20, //指定每页记录数
+      };
+      formProps.searchParam=searchParam;
+      formProps.linkPropName='innerPayee';
+      formProps.objPropName='_innerPayee';
+      dispatch({
+        type:'modaldialog/show',
+        payload: {
+          iconType: 'info-circle-o',          
+          title: '选择收款人',
+          content: <UserBankInfoSelect {...formProps} />,
+          onOk: () => {
+            setFieldsValue({
+              innerPayee: record.innerPayee,
+              _innerPayee: record._innerPayee,
+              _payeeName: record._innerPayee.name,
+              _telephone: record._innerPayee.telephone,
+              _payeeBank: record._innerPayee.bank,
+              _payeeBankno: record._innerPayee.bankno,
+            });
+            return true;
+          },
+          style: "width:850px !important;",
+        }
+      });
+    }else{ //若外部复选框选中 弹出外部收款人信息进行选择
+       record._innerPayee=undefined;
+       record.innerPayee=undefined;
+       _payee={};
+       let searchParam={ //搜索条件
+          filter: {
+          },
+          size: 20, //指定每页记录数
+        };
+       formProps.searchParam=searchParam;
+       formProps.linkPropName='outerPayee';
+       formProps.objPropName='_outerPayee';
+       dispatch({
+        type:'modaldialog/show',
+        payload: {
+          iconType: 'info-circle-o',
+          title: '选择收款人',
+          content: <PayeeSelect {...formProps} />,
+          onOk: () => {
+            setFieldsValue({
+              outerPayee: record.outerPayee,
+              _outerPayee: record._outerPayee,
+              _payeeName: record._outerPayee.name,
+              _telephone: record._outerPayee.telephone,
+              _payeeBank: record._outerPayee.bank,
+              _payeeBankno: record._outerPayee.bankno,
+            });
+            return true;
+          },
+          style: "width:1000px !important;",
+        }
+       });
+    }
+  } // end of selectPayeeInfo
+
+} // end of class
+
+export default PaymentSection;

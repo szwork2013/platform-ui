@@ -1,0 +1,38 @@
+import service from 'service';
+
+import { modelTemplate } from 'utils';
+import Form from './Form';
+import { message } from 'antd';
+
+//请假模型定义
+const namespace = {
+  name: 'leave_leaves', //模型的命名空间
+  title: '请假', //模型的名称
+  clazz: 'Leave', //模型对应的后台实体类
+  linkAttrs: ['category', 'createdBy', 'createdBy.org', 'createdByorg.parentOrg'],
+};
+
+const modelParam = {
+  form: Form, //使用的表单
+  //打开窗口标题生成器
+  titleRender: (record) => !record.leavePerson ? '新请假' :'请假：'+record.leavePerson,
+  effects: {
+    //表单消息：办结
+    *settled ({payload}, { call, put,select }) {
+      //解构消息
+      let { record,href } = payload;
+      //办结
+      let result =yield call(service.updateRecord,service.parseRecordUrl(record)+'/no',{});
+      record.leaveNo=result;
+
+      message.success("操作成功！", 3);
+
+      yield put ({
+        type:'completeTodo',
+        payload
+      });
+    },
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

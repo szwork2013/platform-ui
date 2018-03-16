@@ -1,0 +1,102 @@
+import React from 'react';
+
+import { Input, Checkbox, Select, InputNumber } from 'antd';
+import { View, DropdownSelect } from 'components';
+import service from  'service'
+import modelDefinition from '../model';
+const Option = Select.Option;
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+const ViewComponent = (props) => {
+
+  //定义操作条属性
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: false, //显示删除按钮
+  }
+  let searchParam = { //搜索条件
+    filter: { //过滤规则
+      clazz: 'SheetRow', //模型对应的后台实体类
+      where: '1=1', //条件
+    },
+    size: 20, //指定每页记录数
+    sort: 'o.id,desc' //缺省排序规则
+  }
+
+    const itemProps = {
+      type:'list',
+      labelKey: 'name',
+      modelName: 'budget_item',
+      searchParam: {
+        filter: {
+          where:'',
+        },
+        sort: 'o.sortNo,asc',
+        size:1000,
+      },
+    };
+    const sheetProps = {
+      type:'list',
+      labelKey: 'name',
+      modelName: 'budget_sheet',
+      searchParam: {
+        filter: {
+          where:'',
+        },
+        size:1000,
+      },
+    };    
+  //定义列表属性
+  const listProps = {
+    columns: [ // 和antd table组件的列定义相同
+      {type:'select', title: '表名', width: 130, dataIndex: 'sheet', key: 'sheet',
+        fulltext: 'sheet.name',
+        editor:<DropdownSelect {...sheetProps} />,
+        textRender:(value,record)=>{
+              if (record.sheetId){
+                 let href = service.constructRecordUrl({modelName:'budget_sheet', id:record.sheetId});
+                 record.sheet = record.sheet?record.sheet:href;
+              }
+          return record.sheetName
+        },
+      },
+      { title: '显示名称', width: 100, dataIndex: 'name', key: 'name', editor: <Input />},
+      {type:'select', title: '数据项', width: 130, dataIndex: 'item', key: 'item',
+        fulltext: 'item.name',
+        editor:<DropdownSelect {...itemProps} />,
+        textRender:(value,record)=>{
+              if (record.itemId){
+                 let href = service.constructRecordUrl({modelName:'budget_item', id:record.itemId});
+                 record.item = record.item?record.item:href;
+              }
+          return record.itemName
+        },
+      },
+    { title: '行号', width: 100, dataIndex: 'rowNum', key: 'rowNum', editor: <Input /> },
+    { title: '排序号', width: 100, dataIndex: 'pyXuHao', key: 'pyXuHao', editor: <Input /> },
+    { title: '计算公式', width: 200, dataIndex: 'formula', key: 'formula', editor: <Input /> },
+    { title: '访问控制编码', width: 100, dataIndex: 'aclCode', key: 'aclCode', editor: <Input /> },
+    ],
+  };
+
+  //翻页器属性
+  const paginationBarProps = {};
+
+  return (
+    <View key={modelName + 'ViewLayout'} {...props}
+          editMode='row' //编辑模式：单行编辑
+          modelName={modelName} //模型名称
+          searchParam={searchParam}
+          actionBar={actionBarProps} //操作条定义
+          list={listProps} //列表定义
+          paginationBar={paginationBarProps}
+    />
+  )
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({ sheetrow, loading }) =>
+  ({ sheetrow, loading: loading.models[modelName] })
+)(ViewComponent);

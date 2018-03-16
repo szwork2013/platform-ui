@@ -1,0 +1,36 @@
+import {config} from 'utils';
+import service from 'service'
+
+const {httprequest} = service;
+const {API} = config;
+
+
+export const getList = async (param) => {
+  return httprequest(`${API}/workflow_useful_expressions/search/findByUser`, {
+    method: 'get',
+    data: param
+  });
+};
+
+
+export const create = async (param) => {
+  return httprequest(`${API}/workflow_useful_expressions`, {
+    method: 'post',
+    data: param
+  });
+};
+
+export const del = async (links) => {
+  links.forEach((link) => {
+    return httprequest(link, {
+      method: 'delete',
+    });
+  })
+};
+
+export const patch = async (selfLink, param) => {
+  return httprequest(selfLink, {
+    method: 'patch',
+    data: param,
+  });
+};

@@ -1,0 +1,16 @@
+import { connect } from 'dva';
+
+import { Form as FormLayout } from 'components'
+import Form from './EmbeddedForm';
+
+const Layout = (props) => {
+  	//解构参数
+
+	//显示UI
+	return (
+    <FormLayout  embeddedForm={<Form {...props} />} {...props}>
+    </FormLayout>
+	);
+}
+
+export default Layout;

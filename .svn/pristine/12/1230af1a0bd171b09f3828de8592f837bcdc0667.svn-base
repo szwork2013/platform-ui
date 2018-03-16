@@ -1,0 +1,76 @@
+import service from 'service';
+import wfservice from 'wfservice';
+import {getYearList,initDeptYearly,constructSearchParam} from './service';
+import { modelTemplate } from 'utils';
+
+//权限模型定义
+const namespace = {
+  name: 'indicator_yearlyindicator', //模型的命名空间
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+    },
+    size: 20, //指定每页记录数
+  },
+  state: {
+    conditionData:{}, //条件数据
+    yearOptions:[],
+  },
+  title: '经济指标', //模型的名称
+  clazz: 'YearIndicator', //模型对应的后台实体类
+};
+
+const modelParam = {
+  titleRender: (record) => !record ? '新经济指标' :'经济指标：'+record.content,
+  effects: {
+   //初始化模型消息
+    *initialize({payload}, {select, call, put}) {
+      //初始化模型数据
+      //设置年度为当前年度
+      let thisYear=new Date().getFullYear();
+      let conditionData={};
+      let yearOptions=[];
+      conditionData.year=thisYear;
+      //初始化选项
+      yearOptions=yield call(getYearList,payload);
+      let deptId=service.userInfo.user.org.id;
+      yield initDeptYearly({deptId});
+      //修改模型数据
+      yield put({
+        type: 'save',
+        payload: {conditionData, yearOptions}
+      });
+
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = [];
+      searchParam.projection = 'list';
+      yield put({
+        type: 'query',
+        payload: {searchParam, initQuery: true}
+      })
+    },
+
+    //修改条件数据消息
+    *changeConditionData({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      conditionData={...conditionData,...payload};
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = [];
+      searchParam.projection = 'list';
+      if (!(conditionData.where||conditionData.where=='')) {
+        yield put({
+          type: 'query',
+          payload: {searchParam}
+        })
+      }
+    },
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

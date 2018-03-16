@@ -1,0 +1,348 @@
+import { Col, Button, Icon } from 'antd';
+import { Form as FormLayout, FormItem } from 'components';
+
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+
+import { constructSelectInfo } from '../../service';
+import * as myService from '../../../execution/service';
+
+//选项设置表单
+const OptionsForm = (props) => {
+  //解构参数
+  let {
+    conditionData, //条件数据
+    dispatch,
+  } = props;
+
+  const expenditureType = conditionData.expenditureType;
+
+  //构造FormItem的公共参数
+  const { getFieldDecorator, setFieldsValue } = props.form;
+  const oneItemWidth = ['96%', '10%', '90%'];
+  const itemProps = {
+    canEdit: true, getFieldDecorator, setFieldsValue, width: oneItemWidth,
+    controlProps: { allowClear: true }, required: false,
+  };
+
+  return (
+    <Form layout='inline'>
+      <Row>
+        {renderExpenditureTypeSelect()}
+      </Row>
+      {expenditureType == 'infrastructure' &&
+        <span>
+          <Row>
+            {renderSubsidiarySelect()}
+          </Row>
+          <Row>
+            {renderFundSourceSelect()}
+          </Row>
+        </span>
+      }
+      {expenditureType != 'infrastructure' &&
+        <span>
+          <Row>
+            {renderYearSelect()}
+          </Row>
+          <Row>
+            {renderSubsidiarySelect()}
+          </Row>
+          <Row>
+            {renderFundSourceSelect()}
+          </Row>
+        </span>
+      }
+    </Form>
+  )
+
+  //构造资金属性选择组件
+  function renderExpenditureTypeSelect() {
+    //资金属性选项
+    let expenditureTypeOptions = [
+      { 'id': 'operating', 'name': '生产费用' },
+      { 'id': 'infrastructure', 'name': '基建费用' },
+    ];
+
+    return (
+      <FormItem type='Select' {...itemProps} placeholder={'资金属性'}
+        itemKey='expenditureType' options={expenditureTypeOptions}
+        initialValue={conditionData.expenditureType}
+        onChange={onExpenditureTypeChange}
+      />
+    );
+  }
+
+  //构造子公司选择组件
+  function renderSubsidiarySelect() {
+    return (
+      <FormItem type='Select' {...itemProps} placeholder='公司'
+        itemKey='subsidiary' onSelect={onSubsidiarySelect}
+        initialValue={conditionData.subsidiary && conditionData.subsidiary.href}
+        labelKey='orgName' modelName='orgs' searchParam={{
+          filter: {
+            where: 'o.type=3'
+          },
+          size: 1000,
+          sort: 'o.sortNo,asc'
+        }}
+      />
+    );
+  }
+
+  //构造资金来源选择组件
+  function renderFundSourceSelect() {
+    let title = expenditureType == 'operating' ? '场站' : '基建项目';
+    let key = expenditureType;
+    let where = '1=1';
+
+    if (expenditureType) {
+      if (expenditureType == 'operating') {
+        title = '场站';
+        where = "o.type=0";
+      }
+      else {
+        title = '基建项目';
+        where = "o.type=1";
+      }
+    }
+    else {
+      title = '场站/基建项目';
+    }
+
+    if (conditionData.subsidiary) {
+      where += ' and o.org.id=' + conditionData.subsidiary.id;
+      key += conditionData.subsidiary.id;
+    }
+
+    return (
+      <FormItem key={key} type='Select' {...itemProps} placeholder={title}
+        itemKey='fundSource' onSelect={onFundSourceSelect}
+        initialValue={conditionData.fundSource && conditionData.fundSource.href}
+        modelName={'expenditure_fundsource'} searchParam={{
+          filter: {
+            where: where
+          },
+          size: 1000,
+          sort: 'o.sortNo,asc'
+        }}
+      />
+    );
+  }
+
+  //构造使用部门选择组件
+  function renderUseDeptSelect() {
+    return (
+      <FormItem type='Select' {...itemProps} placeholder='使用部门/场站'
+        itemKey='useDept' onSelect={onUseDeptSelect}
+        initialValue={conditionData.useDept && conditionData.useDept.href}
+        labelKey='orgName' modelName='orgs' searchParam={{
+          filter: {
+            where: 'o.type=2 or o.type=5'
+          },
+          size: 1000,
+          sort: ['o.type,asc', 'o.sortNo,asc']
+        }}
+      />
+    );
+  }
+
+  //构造年度选择组件
+  function renderYearSelect() {
+    //构造年度的选项
+    let date = new Date();
+    let thisYear = date.getFullYear();
+    let lastYear = thisYear - 1;
+
+    let yearOptions = [
+      { 'id': thisYear, 'name': thisYear },
+      { 'id': lastYear, 'name': lastYear },
+    ];
+
+    return (
+      <FormItem type='Select' {...itemProps} placeholder='年度'
+        itemKey='year' options={yearOptions} initialValue={conditionData.year}
+      />
+    );
+  }
+
+  //构造使用权限选择组件
+  function renderUsePermissionSelect() {
+    //使用权限选项
+    let usePermissionOptions = [
+      { 'id': '1', 'name': '部门自行管理' },
+      { 'id': '2', 'name': '公司统筹' },
+    ];
+
+    return (
+      <FormItem type='Select' {...itemProps} placeholder={'使用权限'}
+        itemKey='usePermission' options={usePermissionOptions}
+        initialValue={conditionData.usePermission}
+      />
+    );
+  }
+
+  //构造类型选择组件
+  function renderTypeSelect() {
+    //合同/费用选项
+    let typeOptions = [
+      { 'id': '1', 'name': '费用' },
+      { 'id': '2', 'name': '合同' },
+    ];
+
+    return (
+      <FormItem type='Select' {...itemProps} placeholder={'费用/合同'}
+        itemKey='type' options={typeOptions}
+        initialValue={conditionData.type}
+      />
+    );
+  }
+
+
+  //构造状态选择组件
+  function renderStateSelect() {
+    let stateOptions = myService.getStateOptions();
+
+    return (
+      <FormItem type='Select' {...itemProps} placeholder={'审批状态'}
+        itemKey='state' options={stateOptions} multiple={true}
+        initialValue={conditionData.state}
+      />
+    );
+  }
+
+  //构造开始日期
+  function renderStartDate() {
+    return (
+      <FormItem type='DatePicker' {...itemProps} placeholder={'申请日期晚于'}
+        itemKey='startDate' initialValue={conditionData.startDate}
+        controlProps={{ size: 'default' }}
+      />
+    );
+  }
+
+  //构造结束日期
+  function renderEndDate() {
+    return (
+      <FormItem type='DatePicker' {...itemProps} placeholder={'申请日期早于'}
+        itemKey='endDate' initialValue={conditionData.endDate}
+        controlProps={{ size: 'default' }}
+      />
+    );
+  }
+
+  //资金属性变化事件处理
+  function onExpenditureTypeChange(value, node) {
+    let date = new Date();
+    let thisYear = date.getFullYear();
+
+    let conditionData = {
+      expenditureType: value,
+      year: value == 'operating' ? thisYear : null,
+    };
+
+    //发消息通知模型条件发生变化
+    dispatch({
+      type: 'expenditure_queryform/initialize',
+      payload: conditionData,
+    })
+
+    return true;
+  }
+
+  //子公司选中事件处理
+  function onSubsidiarySelect(value, node) {
+    let record = node.props.dataRef;
+    let subsidiary = {
+      id: record.id,
+      name: record.orgName,
+      href: value,
+    }
+
+    //发消息通知模型条件发生变化
+    dispatch({
+      type: 'expenditure_queryform/changeConditionData',
+      payload: { subsidiary, fundSource: {} }
+    })
+
+    return true;
+  }
+
+  //资金来源选择事件处理
+  function onFundSourceSelect(value, node) {
+    let record = node.props.dataRef;
+    let fundSource = {
+      id: record.id,
+      name: record.name,
+      href: value,
+    }
+
+    //发消息通知模型条件发生变化
+    dispatch({
+      type: 'expenditure_queryform/changeConditionData',
+      payload: { fundSource }
+    })
+
+    return true;
+  }
+
+  //使用部门选中事件处理
+  function onUseDeptSelect(value, node) {
+    let record = node.props.dataRef;
+    let useDept = {
+      id: record.id,
+      name: record.orgName,
+      href: value,
+    }
+
+    //发消息通知模型条件发生变化
+    dispatch({
+      type: 'expenditure_queryform/changeConditionData',
+      payload: { useDept }
+    })
+
+    return true;
+  }
+}
+
+//表单字段被修改事件处理
+const onFieldsChange = (props, fields) => {
+  //解构参数
+  const {
+    dispatch,
+  } = props;
+
+  let changed = false;
+  let changedData = {};
+  for (let x in fields) {
+    //选中一个值时：在各自组件的事件处理中已经处理过，这里不处理
+    if ((x == 'expenditureType' || x == 'fundSource' || x == 'subsidiary' || x == 'useDept') &&
+      fields[x].value) {
+      continue;
+    }
+    changedData[fields[x].name] = fields[x].value;
+    changed = true;
+  }
+
+  if (changed) {
+    //发消息通知模型条件发生变化
+    dispatch({
+      type: 'expenditure_queryform/changeConditionData',
+      payload: { ...changedData }
+    })
+  }
+}
+
+import { Form as AntdForm } from 'antd';
+const antdOptionsForm = AntdForm.create({
+  onFieldsChange: onFieldsChange
+})(OptionsForm);
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({
+  expenditure_queryform: { conditionData }
+}) =>
+  ({ conditionData })
+)(antdOptionsForm);

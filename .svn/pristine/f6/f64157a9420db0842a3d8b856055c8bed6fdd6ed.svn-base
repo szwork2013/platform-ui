@@ -1,0 +1,60 @@
+import {modelTemplate} from 'utils';
+import * as todoService from './service'
+import service from 'service';
+import config from 'config';
+
+const { api } = config; //取得RESTful api配置信息
+
+const namespace = {
+  name: 'todo_link',
+  title: '待办事项',
+  clazz: 'TodoLink',
+};
+
+const modelParam = {
+  effects: {
+    * todoClick({payload}, {call, put, select}) {
+      const {record} = payload;
+      if (record.type === 'resource') { //链接的是资源
+        const linkUrl = record.linkUrl;
+        const modelName = linkUrl.split('?')[0];
+
+        const { rootPath } = api; //RESTful请求的根路径
+        const href = rootPath+'/'+linkUrl; //构造请求url
+
+        //发送请求给目标模型打开指定的记录
+        yield put({
+          type: modelName+'/open',
+          payload: {
+            record: {self: {href}},
+            state: {mode:'open'}
+          }
+        })
+      } else { //链接的是外部链接
+        let win = window.open(record.linkUrl, '_blank');
+        win.focus();
+      }
+
+      if (record.state === 'UNREADED') {
+        yield call(todoService.setRead, record._links.self.href, {state: "1"});
+        const list = yield select(({todo_link}) => todo_link.list);
+        list.forEach((item) => {
+          if (item._links.self.href === record._links.self.href) {
+            item.state = "READED"
+          }
+        });
+        yield put({type: 'save', payload: {list}});
+      }
+    },
+
+    * moveToDone(param, {call, put, select}) {
+      const {list, viewData} = yield select(({todo_link}) => todo_link);
+      const selectedRowKeys = viewData[0].selectedRowKeys;
+      let ids = selectedRowKeys.map((item) => service.extractIdFromRecordHref(item));
+      yield call(todoService.toDone, ids);
+      yield put({type: 'query', payload: {queryType: undefined}});
+    },
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

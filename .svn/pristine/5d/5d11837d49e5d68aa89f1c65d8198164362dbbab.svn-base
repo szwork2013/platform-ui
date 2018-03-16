@@ -1,0 +1,61 @@
+import React from 'react';
+import { connect } from 'dva'
+import { Input, Checkbox, InputNumber } from 'antd';
+import {
+  ViewLayout
+} from 'components';
+
+import modelDefinition from '../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+//Layout组件
+const Layout = ( props ) => {
+  //定义操作条属性
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: false, //显示删除按钮
+    searchButton: {
+      hint:"请输入检索条件"
+    },
+    buttons:[
+      { title:'新增', type:'newRow', icon:'plus' },
+      { title:'保存表格', type:'saveTable', icon:'save', 
+        payloadRender:(model) => ({queryType: model.queryType}),
+        permission: (model) => model.cellEditable==true ? '' : 'hidden',
+      },
+      { title:'废弃修改', type:'reloadTable', icon:'retweet', style:'danger', 
+        payloadRender:(model) => ({queryType: model.queryType}),
+        permission: (model) => model.cellEditable==true ? '' : 'hidden',
+      },
+    ],
+  }
+  //定义列表属性
+  const listProps = {
+    columns:[ // 和antd table组件的列定义相同
+      { title: '项目', width: 160, dataIndex: 'expenditureExcution', key: 'expenditureExcution',editor:<Input /> },
+      { title: '支付次序', width: 200, dataIndex: 'paymentSeq', key: 'paymentSeq',editor:<Input />  },
+      { title: '支付比例', width: 200, dataIndex: 'paymentRate', key: 'paymentRate',editor:<Input />  },
+      { title: '支付金额', dataIndex: 'paymentMoney', key: 'paymentMoney' ,editor:<Input /> },
+      { title: '联系电话', dataIndex: 'telephone', key: 'telephone' ,editor:<Input /> },
+      { title: '单据张数', dataIndex: 'billCount', key: 'billCount' ,editor:<Input /> },
+    ],
+    rowSelection: {}, //选择功能配置
+  };
+  //翻页器属性
+  const paginationBar = true;
+  return (
+    <ViewLayout key={modelName+'ViewLayout'} {...props}
+      modelName={modelName} //模型名称
+      actionBar={actionBarProps} //操作条定义
+      list={listProps} //列表定义
+      paginationBar={paginationBar}
+    />
+  )
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+export default connect(({expenditurePayments, webapp, loading}) =>
+  ({expenditurePayments, webapp, loading: loading.models[modelName]})
+)(Layout);

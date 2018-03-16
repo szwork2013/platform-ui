@@ -1,0 +1,183 @@
+import { Button} from 'antd'
+
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+
+import PayeeSelect from '../PayeeSelect';
+
+import {StyledTable as Table,
+  StyledTr as Row, StyledLabelTd as LabelCol, StyledTd as Col,
+} from '../../../styled';
+
+import service from 'service';
+import wfservice from 'wfservice';
+
+const BusinessSection = (props) => {
+  //解构参数
+  let {
+    record, //FormContainer注入：模型
+    mode,
+    modelName,
+    canEdit = true, //FormContainer注入：是否可编辑
+    dispatch,
+    getFieldDecorator,
+    setFieldsValue,
+    formCanEdit,
+  } = props;
+
+  let confirmTenderEdit= wfservice.authz(record,['confirmTenderEdit']);
+
+  //处理合同收款人账户信息
+  let _contractPayee=record._contractPayee||service.getRecordLinkAttr(record,'contractPayee')||{};
+
+  //合同收款人账户的查询条件
+  const PayeeSearchParam={
+    filter: {
+      clazz:'Payee',
+      jpql:'select o from Payee o',
+    },
+    size: 1000, //指定每页记录数
+  };
+
+  //构造FormItem的公共参数
+  canEdit = canEdit?confirmTenderEdit||formCanEdit&&(service.authz('amended.admin')):false;
+  const itemProps = { canEdit, required: canEdit,
+    getFieldDecorator, setFieldsValue,
+  };
+  const itemWidth = ['100%','0%','100%'];
+  const twoItemWidth = ['40%','0%','100%'];
+  const threeItemWidth = ['30%', '25%', '75%'];
+
+  //设置数字格式
+  const inputNumberProps = {
+    precision:2,
+    size: 'medium',
+    formatter: (value) => {
+      return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+  }
+
+  //显示UI
+  return (
+    <Table>
+      <Row>
+        <LabelCol>采购方式</LabelCol>
+        <Col colSpan={3}>
+          <FormItem type='Input' {...itemProps} width={itemWidth}
+                    title='采购方式' itemKey='procurementMethod' initialValue={record.procurementMethod}
+                    required={confirmTenderEdit}
+          />
+        </Col>
+      </Row>
+      <Row>
+        <LabelCol>定标审批附件</LabelCol>
+        <Col colSpan={3}>
+          <FormItem title='定标审批附件' type='Attachment' {...itemProps}
+                    itemKey='_biddingresultAttachment' link={service.getHrefOfLinkAttr(record)} mode={mode}
+                    multiple  width={itemWidth}
+          />
+        </Col>
+      </Row>
+      <Row>
+        <LabelCol>中标单位</LabelCol>
+        <Col>
+          <FormItem type='Input' {...itemProps} width={itemWidth}
+                    title='中标单位' itemKey='biddingresultUnit' initialValue={record.biddingresultUnit}
+                    placeholder=''  required={confirmTenderEdit}
+          />
+        </Col>
+        <LabelCol>中标价格（元）</LabelCol>
+        <Col>
+          <FormItem type='InputNumber' {...itemProps} width={itemWidth}
+                    title='中标价格' itemKey='biddingresultMoney' initialValue={record.biddingresultMoney}
+                    placeholder='' controlProps={{...inputNumberProps}}
+                    required={confirmTenderEdit}
+          />
+        </Col>
+      </Row>
+      <Row>
+        <LabelCol>合同文本</LabelCol>
+        <Col colSpan={3}>
+          <FormItem title='合同文本' type='Attachment' {...itemProps}  required={confirmTenderEdit}
+                    itemKey='_contractAttachment' link={service.getHrefOfLinkAttr(record)} mode={mode}
+                    multiple  width={itemWidth}
+          />
+        </Col>
+      </Row>
+      <Row>
+        <LabelCol>收款人信息</LabelCol>
+        <Col colSpan={3}>
+          <FormItem style={{display:'none'}} type='Input' {...itemProps}  width={threeItemWidth}
+                    title='收款人' itemKey='contractPayee' initialValue={record.contractPayee}
+          />
+          <FormItem type='Input' {...itemProps}  width={threeItemWidth} controlProps={{onClick:selectContractPayee}}
+                    title='' itemKey='_contractPayeeName' initialValue={_contractPayee.name}
+                    placeholder='请填写收款人' required={confirmTenderEdit}
+          />
+          <FormItem type='Input' {...itemProps} width={threeItemWidth}  canEdit={false}
+                    title='开户银行' itemKey='_contractPayeeBank' initialValue={_contractPayee.bank}
+                    placeholder='' required={confirmTenderEdit}
+          />
+          <FormItem type='Input' {...itemProps} width={threeItemWidth}  canEdit={false}
+                    title='银行账号' itemKey='_contractPayeeBankno' initialValue={_contractPayee.bankno}
+                    placeholder='' required={confirmTenderEdit}
+          />
+        </Col>
+      </Row>
+      <Row>
+        <LabelCol>批准合同编号</LabelCol>
+        <Col colSpan={3}>
+          <FormItem type='Input' {...itemProps} width={itemWidth}
+                    title='批准合同编号' itemKey='contactNo' initialValue={record.contactNo}
+                    placeholder=''  required={confirmTenderEdit}
+          />
+        </Col>
+      </Row>
+      <Row>
+        <LabelCol>定标商务部意见</LabelCol>
+        <Col colSpan={3}>
+          <FormItem type='CommentRow' {...itemProps}  width={itemWidth}
+                    title='定标商务部意见' comments={wfservice.getComments(record,"confirmTender")}
+          />
+        </Col>
+      </Row>
+    </Table>
+  )
+
+  //选择合同收款人
+  function selectContractPayee(){
+    let searchParam={ //搜索条件
+      filter: {
+      },
+      size: 20, //指定每页记录数
+    };
+    const formProps = service.constructPropsOfForm(modelName, record);
+    formProps.searchParam=searchParam;
+    formProps.linkPropName='contractPayee';
+    formProps.objPropName='_contractPayee';
+    dispatch({
+      iconType: 'info-circle-o',
+      type:'modaldialog/show',
+      payload: {
+        iconType: 'info-circle-o',
+        title: '选择收款人',
+        content: <PayeeSelect {...formProps} />,
+        onOk: () => {
+          setFieldsValue({
+            contractPayee: record.contractPayee,
+            _contractPayee: record._contractPayee,
+            _contractPayeeName: record._contractPayee.name,
+            _contractPayeeBankno: record._contractPayee.bankno,
+            _contractPayeeBank: record._contractPayee.bank,
+          });
+          return true;
+        },
+        style: "width:1000px !important;",
+      }
+    });
+  }
+
+}
+
+export default BusinessSection;

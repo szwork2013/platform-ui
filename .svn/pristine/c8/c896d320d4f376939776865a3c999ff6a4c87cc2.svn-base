@@ -1,0 +1,97 @@
+import React from 'react';
+import { Input, InputNumber, Checkbox, DatePicker} from 'antd';
+import {
+  ModuleLayout,
+  Tree,
+  View,
+  DropdownSelect,
+} from 'components';
+
+import service from 'service';
+import modelDefinition from '../../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+function getWeekOfYear(){
+  var today = new Date();
+  var firstDay = new Date(today.getFullYear(),0, 1);
+  var dayOfWeek = firstDay.getDay(); 
+  var spendDay= 1;
+  if (dayOfWeek !=0) {
+    spendDay=7-dayOfWeek+1;
+  }
+  firstDay = new Date(today.getFullYear(),0, 1+spendDay);
+  var d =Math.ceil((today.valueOf()- firstDay.valueOf())/ 86400000);
+  var result =Math.ceil(d/7);
+  return result + 1;
+};
+
+let year = new Date().getFullYear();
+let week = getWeekOfYear();
+let userId = service.userInfo.user.id;
+
+class ViewComponent extends React.Component {
+
+  render() {
+    const props = this.props;
+
+    //定义操作条属性
+    const actionBarProps = {
+      new: true, //显示新增按钮
+      delete: false, //显示删除按钮
+      newRow: false,
+      newPayloadRender: () => {return {processNo:'problem_report'}},
+    }
+    const workLogRender = (text,record) =>{
+      if(text){
+        if(text.length>26){
+          text = text.substring(0,23)+'......';
+        } 
+      }
+      return text;
+    }
+    //定义列表属性
+    const listProps = {
+      columns:[
+        {title: '问题', dataIndex: 'title', key: 'title', 
+          sorter: true, link: 'open', width: '400'},
+        {title: '问题描述', dataIndex: 'problemDescription', key: 'problemDescription', 
+          sorter: true, link: 'open', render:workLogRender},
+        {title: '创建时间', dataIndex: 'createdTime', key: 'createdTime', width:150,}
+      ],
+      rowSelection: {},
+      colDefaultLink: 'open',
+    };
+
+    //翻页器属性
+    const paginationBarProps = {};
+
+    //定义过滤条件
+    const searchParam = {
+      filter: { //过滤规则
+        where: `o.createdBy.id = ${userId} and (o.state = 0 or o.state = 1)`, //条件
+      },
+      size: 20, //指定每页记录数
+      //排序规则：sortNo升序
+      sort: ['o.id,asc'],
+    };
+
+    return (
+      <View key={modelName+'ViewLayout'} {...props}
+        searchParam={searchParam}
+        modelName={modelName} //模型名称
+        editMode='row' //编辑模式：单行编辑
+        actionBar={actionBarProps} //操作条定义
+        paginationBar={paginationBarProps} //翻页器定义
+        list={listProps} //列表定义
+    />
+    )
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({task_problem, loading, apptabs:{tabs}}) =>
+  ({task_problem, loading: loading.models[modelName], tabs})
+)(ViewComponent);

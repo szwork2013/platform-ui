@@ -1,0 +1,15 @@
+import { modelTemplate } from 'utils';
+//权限模型定义
+const namespace = {
+   name: 'historyDate', //模型的命名空间
+   title: '月度信息历史反馈', //模型的名称
+   clazz: 'MonthlyIndicator',
+   linkAttr:['category','createdBy'],
+   dataSource: 'indicator_monthlyindicator', //数据源
+};
+
+
+const modelParam = {
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

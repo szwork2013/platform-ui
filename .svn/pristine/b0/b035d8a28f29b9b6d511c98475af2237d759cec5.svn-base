@@ -1,0 +1,147 @@
+import {Col, Button, Icon, Popover} from 'antd';
+import { Form as FormLayout, FormItem } from 'components';
+
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+
+import HelpPopover from '../HelpPopover';
+
+//选项设置表单
+const OptionsForm = ( props ) => {
+  //解构参数
+  let {
+    expenditureType, //支出性质
+    conditionData, //条件数据
+    dispatch,
+  } = props;
+
+  if (!expenditureType || expenditureType=='') return null;
+
+  //构造FormItem的公共参数
+  const oneItemWidth = ['96%','10%','90%'];
+
+  const { getFieldDecorator, setFieldsValue } = props.form;
+  const itemProps = { canEdit: true, getFieldDecorator,setFieldsValue,
+    width: oneItemWidth, required: false,
+  };
+
+  return (
+    <Form layout='inline' style={{paddingLeft:20}}>
+      {expenditureType=='operating'&&
+      <Row>
+        <Col span={24}>
+          {renderYearSelect()}
+        </Col>
+      </Row>
+      }
+      <Row>
+        <Col span={24}>
+          {renderProjectSelect()}
+        </Col>
+      </Row>
+    </Form>
+  )
+
+  //构造年度选择组件
+  function renderYearSelect() {
+    //构造年度的选项
+    let date=new Date();
+    let thisYear=date.getFullYear();
+    let lastYear=thisYear-1;
+    let nextYear=thisYear+1;
+
+    let yearOptions = [
+      {'id':lastYear,'name':lastYear+'年度'},
+      {'id':thisYear,'name':thisYear+'年度'},
+    ];
+
+    return(
+      <FormItem type='Select' initialValue={conditionData.year||thisYear} width={oneItemWidth} required={false}
+        title='' options={yearOptions} {...itemProps} itemKey='year' placeholder='年度'
+      />
+    );
+  }
+
+  //构造资金来源选择组件
+  function renderProjectSelect() {
+    let title= expenditureType=='operating' ? '场站' :'项目';
+    let visible = !conditionData.fundSource;
+    let where = expenditureType=='operating' ? "o.type=0" :"o.type=1";
+    
+    return(
+      <div>
+      <HelpPopover visible={visible} placement='bottom' content={'请选择'+title} >
+        <div style={{width:'100%',position:'absolute',left:0,top:20,height:1}}/>
+      </HelpPopover>
+      <FormItem type='Select' {...itemProps}  placeholder={title}
+        itemKey='fundSource' onSelect={onFundSourceSelect}
+        initialValue={conditionData.fundSource&&conditionData.fundSource.href}
+        modelName={'expenditure_fundsource'} searchParam={{
+          filter:{
+            where: where
+          },
+          size:1000,
+          sort: 'o.sortNo,asc'
+        }}
+      />
+      </div>
+    );
+  }
+
+  //资金来源选择事件处理
+  function onFundSourceSelect(value, node) {
+    let record = node.props.dataRef;
+    let fundSource = {
+      id: record.id,
+      name: record.name,
+      href: value,
+      budgetSourceName: record.budgetSourceName,
+    }
+
+    //发消息通知模型条件发生变化
+    dispatch({
+      type: 'expenditure_draftform/changeConditionData',
+      payload: {fundSource}
+    })
+
+    return true;
+  }
+}
+
+//表单字段被修改事件处理
+const onFieldsChange = (props, fields) => {
+  //解构参数
+  const {
+    dispatch,
+  } = props;
+
+  let changed = false;
+  let changedData = {};
+  for(let x in fields) {
+    if (x=='fundSource') continue;
+    changedData[fields[x].name] = fields[x].value;
+    changed = true;
+  }
+
+  if (changed) {
+    //发消息通知模型条件发生变化
+    dispatch({
+      type: 'expenditure_draftform/changeConditionData',
+      payload: {...changedData}
+    })
+  }
+}
+
+import { Form as AntdForm } from 'antd';
+const antdOptionsForm = AntdForm.create({
+  onFieldsChange: onFieldsChange
+})(OptionsForm);
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({
+  expenditure_draftform:{conditionData}
+}) =>
+  ({conditionData})
+)(antdOptionsForm);

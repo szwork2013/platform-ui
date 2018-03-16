@@ -1,0 +1,122 @@
+import React from 'react';
+import { Collapse } from 'antd'
+const Panel = Collapse.Panel;
+
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+
+import TitleSection from '../../common/TitleSection';
+import ExecutionSection from '../../common/ExecutionSection';
+import BusinessSection from '../../common/BusinessSection';
+import PaymentSections from '../../common/PaymentSections';
+import ResultSection from '../../common/ResultSection';
+import DoneSection from '../../common/DoneSection';
+
+import {Styled1stPanel,Styled2stPanel,Styled3stPanel} from '../../execution/Form/styled';
+
+import service from 'service';
+
+//权限定义表单
+class ExpenditurePaymentForm extends React.Component{
+
+  componentDidMount() {
+    let {
+      model, //FormContainer注入：模型
+      href,
+      modelName,
+      dispatch,
+    } = this.props;
+
+    let { record } = model;
+    //发消息查询立项待办数据
+    dispatch({
+      type:modelName+'/setTodoInExecution',
+      payload:{
+        record,
+        href,
+      }
+    });
+  }
+
+  render(){
+  //解构参数
+  let {
+    model, //FormContainer注入：模型
+    canEdit = true, //FormContainer注入：是否可编辑
+    ...rest
+  } = this.props;
+  let { record, state } = model;
+
+  //当从立项发起支付的时候，立项信息在execution字段上
+  let execution=record.execution;
+  if(!execution) { //从支付打开，处理立项信息
+    execution=service.getRecordLinkAttr(record,'expenditureExcution');
+    if (!execution.reserveFundPayee) { //备用金收款人信息
+      execution.reserveFundPayee = record.expenditureReserveFundPayee;
+    }
+    if (!execution.contractPayee) { //合同收款人信息
+      execution.contractPayee = record.expenditureContractPayee;
+    }
+  }
+  let _executionfundSource={};//2017-11-29 zyk 资金来源 处理结算及审定金额
+  if(execution!=undefined){
+    _executionfundSource=service.getRecordLinkAttr(execution,'fundSource')||{};
+  }
+  let ExecutionSectionProps={
+    record:execution,
+    mode:state.mode,
+    canEdit:false,
+    ...rest
+  }
+
+  let PaymentProps={
+    record,
+    mode:state.mode,
+    canEdit,
+    executeLink:service.getHrefOfLinkAttr(execution),
+    inPayment:true,
+    ...rest
+  }
+
+  let ResultProps = {
+    record:execution,
+    mode:state.mode,
+    canEdit:false,
+    inPayment:true,
+    ...rest
+  }
+
+//显示UI
+  return (
+    <Form layout='inline'>
+      <TitleSection record={execution} title="新能源云南分公司支付报账管理流程"/>
+      <Collapse defaultActiveKey={record.state==='END'?'4':'3'}>
+        <Styled1stPanel header={'第一阶段：立项'} key="1">
+          <ExecutionSection {...ExecutionSectionProps}/>
+        </Styled1stPanel>
+        {execution.type==2&&
+        <Styled2stPanel header={'第二阶段：采购'} key="2">
+          <BusinessSection {...ExecutionSectionProps}/>
+        </Styled2stPanel>
+        }
+        <Styled3stPanel header={execution.type==2?'第三阶段：支付':'第二阶段：支付'} key="3">
+          <PaymentSections {...PaymentProps}/>
+        </Styled3stPanel>
+        <Panel header={execution.type==2?'第四阶段：办结':'第三阶段：办结'} key="4">
+        {execution.type == 2 &&_executionfundSource.type=='INFRASTRUCTURE_PROJECT'&&
+          <ResultSection {...ResultProps}/>
+        }
+        {
+          record.state==='END'&&
+          <DoneSection record={record}>
+          </DoneSection>
+        }
+        </Panel>
+      </Collapse>
+    </Form>
+  );
+
+  }
+}
+export default ExpenditurePaymentForm;

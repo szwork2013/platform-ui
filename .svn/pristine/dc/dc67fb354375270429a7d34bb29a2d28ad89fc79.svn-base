@@ -1,0 +1,9 @@
+
+import PaymentSections from './PaymentSections';
+
+export default PaymentSections;
+
+//注册模型
+import {modelRegister} from 'utils';
+import model from './model';
+modelRegister(model);

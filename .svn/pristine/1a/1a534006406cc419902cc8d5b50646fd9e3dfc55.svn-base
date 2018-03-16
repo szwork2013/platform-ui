@@ -1,0 +1,90 @@
+import {Col, Button, Icon, Popover,Input, Select} from 'antd';
+import { Form as FormLayout, FormItem } from 'components';
+import {config} from 'utils';
+import service from 'service';
+let token = service.userInfo.token.value;
+const { api } = config; //取得RESTful api配置信息
+let {rootPath} = api;
+rootPath = rootPath.substring(0,rootPath.length-4);
+let exporthref = `${rootPath}/task_report/export?xpnToken=${token}`;
+const Search = Input.Search;
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+const Option = Select.Option;
+
+//选项设置表单
+const OptionsForm = ( props ) => {
+  //解构参数
+  let {
+    yearOptions,
+    conditionData={}, //条件数据
+    dispatch,
+  } = props;
+  //构造FormItem的公共参数
+  const oneItemWidth = ['96%','10%','90%'];
+
+  const { getFieldDecorator, setFieldsValue } = props.form;
+  const itemProps = {
+    canEdit: true, getFieldDecorator,setFieldsValue, width: oneItemWidth,
+    controlProps:{allowClear:true}, required: false,
+  };
+
+  const handleSearch = (search) =>{
+    dispatch({type:'tasks/search',payload:{search}});
+  }
+
+  return (
+    <Form layout='inline' style={{height:'40px'}}>
+      <Row>
+        <Col span={5}>
+          {renderTaskStateSelect()}
+        </Col>
+        <Col span={5}>
+          <Search placeholder="输入任务名称搜索" enterButton="Search" onSearch={handleSearch}/>
+        </Col>
+      </Row>
+    </Form>
+  )
+  //构造任务状态选择组件
+function renderTaskStateSelect(){
+  return(
+    <Select style={{ width: 200 }} allowClear
+      placeholder="请选择任务状态"
+      mode="multiple"
+      onChange={(value) =>{
+        if(!value || value.length === 0){
+          value = ['3', '4'];
+        }
+        dispatch({
+          type: 'taskParams/changeConditionData',
+          payload: {state:value}
+        });
+      }}>
+      <Option value="3">审批中</Option>
+      <Option value="4">已办结</Option>
+    </Select>
+  );
+}
+}
+
+//表单字段被修改事件处理
+const onFieldsChange = (props, fields) => {
+  //解构参数
+  const {
+    dispatch,
+  } = props;
+}
+
+import { Form as AntdForm } from 'antd';
+const antdOptionsForm = AntdForm.create({
+  onFieldsChange: onFieldsChange
+})(OptionsForm);
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({
+  taskParams:{conditionData,yearOptions}
+}) =>
+  ({conditionData,yearOptions})
+)(antdOptionsForm);

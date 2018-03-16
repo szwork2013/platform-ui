@@ -1,0 +1,116 @@
+import React from 'react';
+import {Collapse, Tabs, Icon, Badge} from 'antd';
+const Panel = Collapse.Panel;
+const TabPane = Tabs.TabPane;
+
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+
+import service from 'service';
+
+import TitleSection from '../../../common/TitleSection';
+
+//权限定义表单
+class DemandPlanForm extends React.Component{
+
+  componentDidMount() {
+
+  }
+
+  render(){
+  //解构参数
+  let {
+    model, //FormContainer注入：模型
+    canEdit = true, //FormContainer注入：是否可编辑
+    getFieldDecorator,
+    setFieldsValue,
+    ...rest,
+  } = this.props;
+  let { record, state } = model;
+
+    //构造FormItem的公共参数
+    const itemProps = { canEdit, required: canEdit,
+      getFieldDecorator, setFieldsValue,
+    };
+    const itemWidth = ['96%','10%','90%'];
+    const twoItemWidth = ['48%','20%','80%'];
+    const threeItemWidth = ['32%', '30%', '70%'];
+    const fourItemWidth = ['24%', '40%', '60%'];
+
+    //设置数字格式
+    const inputNumberProps = {
+      precision:0,
+      size: 'medium',
+    }
+
+//显示UI
+  return (
+    <Tabs tabPosition='top'>
+      <TabPane tab={<span><Icon type="solution"/>表单</span>} key="1">
+        <Form layout='inline'>
+          <div style={{display:'none'}}>
+            <FormItem type='Input' {...itemProps}
+                      title='物资类型' itemKey='type' initialValue={record.type||0}
+            />
+          </div>
+          <TitleSection title='公司IT耗材需求计划审批单'/>
+          <Row>
+              <FormItem type='InputNumber' {...itemProps} width={fourItemWidth}
+                        title='年度' itemKey='year' initialValue={record.year}
+                        placeholder='' controlProps={{...inputNumberProps}} min="1900" max="9999"
+              />
+            <FormItem type='InputNumber' {...itemProps} width={fourItemWidth}
+                      title='月分' itemKey='month' initialValue={record.month}
+                      placeholder='' controlProps={{...inputNumberProps}} min="1" max="12"
+            />
+            <FormItem type='InputNumber' {...itemProps} width={fourItemWidth}
+                      title='批次' itemKey='batchNo' initialValue={record.batchNo}
+                      placeholder='' controlProps={{...inputNumberProps}}
+            />
+            <FormItem title='截止时间' type='DatePicker' showTime={false} {...itemProps} width={fourItemWidth}
+                      itemKey='endDate' initialValue={record.endDate||undefined}
+            />
+          </Row>
+          <Row>
+            <FormItem title='交货日期' type='DatePicker' showTime={false} {...itemProps} width={fourItemWidth}
+                      itemKey='deliveryDate' initialValue={record.deliveryDate||undefined}
+            />
+            <FormItem type='Input' {...itemProps} width={fourItemWidth}
+                      title='交货地点' itemKey='deliveryPoint' initialValue={record.deliveryPoint}
+                      placeholder=''
+                      required={false}
+            />
+            <FormItem type='Input' {...itemProps} width={twoItemWidth}
+                      title='备注' itemKey='remark' initialValue={record.remark}
+                      placeholder=''
+                      required={false}
+            />
+          </Row>
+        </Form>
+      </TabPane>
+      <TabPane  key="2"
+                tab={<span><Icon type="file-text"/>批阅意见</span>}
+      >
+        <Form layout='inline'>
+          <div>意见</div>
+        </Form>
+      </TabPane>
+      <TabPane  key="3"
+                tab={<span><Icon type="file"/>附件</span>}
+      >
+        <Form layout='inline'>
+          <Row>
+              <FormItem title='附件' type='Attachment' {...itemProps}
+                        itemKey='_files' link={service.getHrefOfLinkAttr(record)} mode={state.mode}
+                        multiple  width={itemWidth}
+              />
+          </Row>
+        </Form>
+      </TabPane>
+    </Tabs>
+  );
+  }
+}
+export default DemandPlanForm;

@@ -1,0 +1,66 @@
+import React from 'react';
+
+import {
+  View,
+} from 'components';
+
+import service from 'service';
+
+import modelDefinition from '../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+const ViewComponent = ( props ) => {
+  //定义操作条属性
+  const actionBarProps = {
+    delete: service.authz('leave.admin'),
+    newRow: false,
+  }
+
+  //定义列表属性
+  const listProps = {
+   columns:[ // 和antd table组件的列定义相同
+      { title: '类别', width: 80, dataIndex: 'category.name', key: 'category.name', sorter: true,
+        textRender: (text, record)=>record.categoryName, link:'open'
+      },
+      { title: '申请人', width: 80, dataIndex: 'createdBy.name', key: 'createdBy.name', sorter: true,
+        textRender: (text, record)=>record.leavePerson,
+      },
+      { title: '编号', width: 170, dataIndex: 'leaveNo', key: 'leaveNo', link:'open', sorter: true },
+      { title: '天数', width: 65, fulltext:false, dataIndex: 'days', key: 'days', sorter: true },
+      { title: '请假事由', dataIndex: 'leaveReason', key: 'leaveReason', link:'open' },
+      { title: '创建时间', width: 155, fulltext:false, dataIndex: 'createdTime', key: 'createdTime', sorter: true },
+    ],
+    rowSelection: service.authz('leave.admin') ? {} : undefined, //选择功能配置
+    colDefaultLink: 'open',
+  };
+
+  const user = service.userInfo.user;
+
+  //定义过滤条件
+  const searchParam = {
+   filter: { //过滤规则
+    },
+      size: 20, //指定每页记录数
+      sort: ['o.leaveNo,desc','o.createdTime,desc'],
+  };
+
+  //翻页器属性
+  const paginationBarProps = {};
+  return (
+    <View key={modelName + 'ViewLayout'} {...props}
+      searchParam={searchParam}
+      modelName={modelName} //模型名称
+      actionBar={actionBarProps} //操作条定义
+      paginationBar={paginationBarProps} //翻页器定义
+      list={listProps} //列表定义
+    />
+  )
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({leave_leaves, loading, apptabs:{tabs}}) =>
+  ({leave_leaves, loading: loading.models[modelName], tabs})
+)(ViewComponent);

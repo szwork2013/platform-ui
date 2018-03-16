@@ -1,0 +1,116 @@
+import React from 'react';
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+
+import {StyledTable as Table,
+  StyledTr as Row, StyledLabelTd as LabelCol, StyledTd as Col,
+} from '../../../styled';
+
+import service from 'service';
+import wfservice from 'wfservice';
+
+class ResultSection extends React.Component {
+  //计算动态属性
+  constructDynamicProps = () => {
+    //解构参数
+    const props = this.props;
+    let {
+      record, //FormContainer注入：模型
+      canEdit = true, //FormContainer注入：是否可编辑
+      mode,
+      getFieldDecorator,
+      setFieldsValue,
+      formCanEdit,
+    } = props;
+
+    //构造FormItem的公共参数
+    this.itemProps = {
+      placeholder:'',
+      getFieldDecorator,
+      setFieldsValue,
+      canEdit: canEdit?formCanEdit:false,
+    };
+
+    //设置数字格式
+    this.inputNumberProps = {
+      precision:2,
+      formatter: (value) => {
+        return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      }
+    }
+  }
+
+  //渲染组件
+  render() {
+    this.constructDynamicProps();
+
+    //显示UI
+    return(
+      <div>
+        {/*构造备用金审批意见栏*/}
+        {this.renderContactAmountFields()}
+      </div>
+    )
+  } // end of render()
+
+  //构造合同金额字段
+  renderContactAmountFields() {
+    const oneItemWidth = ['100%', '0%', '100%'];
+    const threeItemWidth = ['33%', '0%', '100%'];
+
+    const {record,inPayment=false} = this.props;
+    if (record.type!=2) return null; //不是合同申请
+
+    const {itemProps,mode} = this;
+
+    //是否可以编辑合同金额
+    const paymentEdit = !inPayment&&(wfservice.authz(record,['paymentEdit'])|| service.authz('ApprovedAndFinal.admin'));
+
+    return(
+      <Table>
+        <Row>
+          <LabelCol>结算金额</LabelCol>
+          <Col>
+            <FormItem type='InputNumber' {...itemProps}  width={threeItemWidth} required={false}
+              title='结算金额（元）' itemKey='settlementMoney' initialValue={record.settlementMoney}
+              canEdit={paymentEdit||itemProps.canEdit} min={0} controlProps={{...(this.inputNumberProps)}}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>结算附件</LabelCol>
+          <Col>
+            <FormItem title='结算附件' type='Attachment' {...itemProps}  required={false}
+                    itemKey='_settlementAttachment' link={service.getHrefOfLinkAttr(record)} mode={mode}
+                    multiple  width={oneItemWidth}
+                    canEdit={paymentEdit||itemProps.canEdit}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>审定金额</LabelCol>
+          <Col>
+            <FormItem type='InputNumber' {...itemProps} width={threeItemWidth} required={false}
+              title='审定金额（元）' itemKey='approve' initialValue={record.approve}
+              placeholder='' canEdit={paymentEdit||itemProps.canEdit} min={0} controlProps={{...(this.inputNumberProps)}}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <LabelCol>审定附件</LabelCol>
+          <Col>
+            <FormItem title='审定附件' type='Attachment' {...itemProps}  required={false}
+                    itemKey='_approveAttachment' link={service.getHrefOfLinkAttr(record)} mode={mode}
+                    multiple  width={oneItemWidth}
+                    canEdit={paymentEdit||itemProps.canEdit}
+            />
+          </Col>
+        </Row>
+      </Table>
+    );
+  } // end of renderContactAmountFields()
+
+
+} // end of class
+
+export default ResultSection;

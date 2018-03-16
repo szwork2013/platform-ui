@@ -1,0 +1,175 @@
+import {routerRedux} from 'dva/router';
+import lodash from 'lodash';
+
+import {Button,Input,Message} from 'antd';
+import { View } from 'components';
+
+import StatInfo from '../../../queryform/QueryForm/ViewGrid/ResultStatInfo';
+
+import {accountingNumberFormat} from 'utils';
+import service from 'service';
+import * as executionService from '../../../execution/service';
+
+import {constructBudgetSource} from '../../service';
+
+//结果视图
+const ResultView = ( props ) => {
+  const {expenditureType, conditionData,selectedRowKeys, dispatch} = props;
+  
+  //定义操作条属性
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: true, //显示删除按钮
+    newRow: false,
+    buttons: renderButtons(),
+  }
+
+  //定义列表属性
+  const listProps = {
+    rowSelection:{type:'checkbox'},
+    columns:[ // 和antd table组件的列定义相同
+      { title: '项目/场站', width: 90, dataIndex: 'fundSource.name', key: 'fundSource.name',fulltext:true,sorter: true,textRender: (text, record)=>{return record.fundSourceName}},
+      { title: '科目', width: 80, dataIndex: 'category.text', key: 'category.text',fulltext:true,sorter: true,textRender: (text, record)=>{return record.categoryFullName}},
+      { title: '事项名称',width:160,dataIndex: 'projectName', key: 'projectName', link: 'open',fulltext:true},
+      { title: '预算来源', width: 120, dataIndex: 'budgetSource', key: 'budgetSource',fulltext:true, link: 'open'},    
+      { title: '申请金额(元)', width: 120, dataIndex: 'budget', key: 'budget',fulltext:true,sorter:true,
+        textRender:(value) => {
+          if (!value) return '***';
+          return accountingNumberFormat(value);
+        },
+        className: 'xpiui-view-col-right',
+      },
+      { title: '中标价格(元)', width: 130, dataIndex: 'biddingresultMoney', key: 'biddingresultMoney',sorter:true, fulltext: false,
+        editor:<Input />,
+        textRender:(value) => {
+          if (!value) return '***';
+          return accountingNumberFormat(value);
+        },
+        className: 'xpiui-view-col-right',
+      },        
+      { title: '已支付金额(元)', width: 130, dataIndex: 'paymentTotal', key: 'paymentTotal',sorter:false, fulltext: false,
+        editor:<Input />,
+        textRender:(value) => {
+          if (!value) return '***';
+          return accountingNumberFormat(value);
+        },
+        className: 'xpiui-view-col-right',
+      }
+    ],
+    colDefaultLink: 'open',
+  };
+
+  //翻页器属性
+  const paginationBarProps = {
+    reloadButton:false,
+  };
+
+  return (
+    <div>
+      <View  {...props} 
+        editMode='row'
+        notQueryData={true}
+        modelName='expenditure_executions' //模型名称
+        actionBar={actionBarProps} //操作条定义
+        list={listProps} //列表定义
+        paginationBar={paginationBarProps}
+        onSearch={handleOnSearch}
+        heightOffset={-50}
+      />
+    </div>
+  )
+
+  //构造新建按钮组件
+  function renderButtons() {
+    return(
+      <span>
+        <Button style={{marginLeft:10}} onClick={()=>handleUpateProject()}  icon='api' type="danger">设置项目/场站</Button>
+        <Button style={{marginLeft:10}} onClick={()=>handleUpateCategory()} icon='api' type="danger">设置科目</Button>
+        <Button style={{marginLeft:10}} onClick={()=>handleUpdateMoney()}  icon='api' type="danger">补录金额</Button>
+        <Button style={{marginLeft:10}} onClick={()=>handleDelete()}  icon='api' type="danger">批量删除</Button>
+      </span>
+    );
+  }
+
+  //更新科目
+  function handleUpateCategory(type) {
+    if(!conditionData.category){
+       Message.info("请先选择一个科目！");
+       return;
+    }
+    //发消息更新所属科目
+    dispatch({
+      type: 'expenditure_modifyform/updateCategory',
+      payload: {
+      }
+    })
+  }
+
+
+  //更新项目/场站
+  function handleUpateProject(type) {
+    if(!conditionData.fundSource){
+       Message.info("请先选择一个项目或场站！");
+       return;
+    }
+    //发消息更新所属项目/场站
+    dispatch({
+      type: 'expenditure_modifyform/updateProject',
+      payload: {
+      }
+    })
+  }
+
+  //补录已支付金额
+  function handleUpdateMoney() {
+    //发消息更新金额
+    dispatch({
+      type: 'expenditure_modifyform/updateMoney',
+      payload: {
+      }
+    })
+  }
+
+    //批量删除
+  function handleDelete() {
+    //发消息删除
+    dispatch({
+      type: 'expenditure_modifyform/batchDelete',
+      payload: {
+      }
+    })
+  }
+
+  //处理清除按钮点击事件
+  function handleClearButtonClicked() {
+    props.dispatch(
+      routerRedux.push({
+        pathname: service.curPath
+      })
+    );
+  }
+
+  //处理按钮条检索事件
+  function handleOnSearch({where}) {
+    //发消息通知模型条件发生变化
+    props.dispatch({
+      type: 'expenditure_modifyform/changeConditionData',
+      payload: {where}
+    })
+  }
+}
+
+import { connect } from 'dva';
+export default connect(({
+    expenditure_modifyform:{conditionData,selectedRows},
+    expenditure_executions,
+    loading,
+    apptabs:{tabs}
+  }) =>
+  ({
+    conditionData,
+    expenditure_executions, 
+    loading: loading.models.expenditure_executions,
+    tabs,
+  })
+)(ResultView);

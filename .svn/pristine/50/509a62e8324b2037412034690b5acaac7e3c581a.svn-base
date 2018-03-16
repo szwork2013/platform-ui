@@ -1,0 +1,73 @@
+import React from 'react';
+
+import { Input, Checkbox, InputNumber } from 'antd';
+
+import {
+  View
+} from 'components';
+
+import modelDefinition from '../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+//View组件
+const ViewComponent = ( props ) => {
+  //定义操作条属性
+  const actionBarProps = {
+    new: true, //显示新增按钮
+    delete: true, //显示删除按钮
+    newRow: false  //是否显示在表格新增的按钮
+  }
+
+  //定义列表属性
+  const listProps = {
+    columns:[ // 和antd table组件的列定义相同
+      { title: '车牌号', dataIndex: 'licensePlate', key: 'licensePlate', width:100, sorter:true, link:'edit'},
+      { title: '能量类型', dataIndex: 'bunkersType', key: 'bunkersType', width:90,
+        textRender: (text, record) => {
+          if(record.bunkersType == 1)
+            return "汽油";
+          else
+            return "柴油";
+        },
+        sorter:true
+      },
+      { title: '型号', dataIndex: 'type', key: 'type', link: 'edit', width:160, sorter:true },
+      { title: '使用中', dataIndex: 'isUsing', key: 'isUsing',  width:80,
+        textRender: (text, record) => {
+          if(record.isUsing == 'false' || record.isUsing == null)
+            return "否";
+          else
+            return "是";
+        },
+        sorter:true
+      },
+      { title: '使用单位', dataIndex: 'orgs', key: 'orgs', fulltext: false,
+        textRender: (text, record) => record.orgList&&record.orgList.join(','),
+        link: 'edit'
+      },
+
+    ],
+    rowSelection: {}, //选择功能配置
+  };
+
+  //翻页器属性
+  const paginationBarProps = {};
+
+  return (
+    <View key={modelName+'ViewLayout'} {...props}
+      editMode='row' //编辑模式：单行编辑
+      modelName={modelName} //模型名称
+      actionBar={actionBarProps} //操作条定义
+      list={listProps} //列表定义
+      paginationBar={paginationBarProps}
+    />
+  )
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva'
+export default connect(({car_cars, loading, apptabs:{tabs}}) =>
+  ({car_cars, loading: loading.models[modelName], tabs})
+)(ViewComponent);

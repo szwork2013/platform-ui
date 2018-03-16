@@ -1,0 +1,11 @@
+import {httprequest} from 'service'
+import {config} from 'utils';
+
+const {API} = config;
+
+export const toTodo = async (ids) => {
+  return httprequest(`${API}/done_link/to_todo`, {
+    method: 'post',
+    data: ids
+  });
+};

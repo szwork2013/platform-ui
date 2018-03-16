@@ -1,0 +1,46 @@
+import {Row, Col, Icon} from 'antd';
+
+//结果统计信息
+const ResultStatInfo = ( props ) => {
+	//解构参数
+	let {
+		totalTitle = '',
+		bottom = 3,
+    statInfo,
+    statData, //用于多个控件使用一个模型的情况
+    uid, //用于多个控件使用一个模型的情况
+	} = props;
+
+	if (uid&&statData) { //多个控件使用一个模型的情况
+		let data = statData.find((r) => r.key==uid);
+		if (data) statInfo = data.statInfo;
+	}
+
+	let {
+		total = 0,
+		applyAmount = 0,
+		paymentAmount=0
+	} = statInfo;
+
+	if (!total || !applyAmount || !paymentAmount) return null;
+
+  return (
+		<Row style={{position:'absolute', zIndex:10000, bottom}}>
+			<Col span={24}>
+				<Icon type='pie-chart' style={{color:'#f50', marginLeft:5, marginRight:5}}/>
+				<span>{totalTitle}合计：{total}个，</span>
+				<span>申请：{applyAmount}元</span>
+				<span> / </span>
+				<span>支付：{paymentAmount}元</span>
+			</Col>
+		</Row>
+  )
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({
+  expenditure_statform:{statInfo,statData}
+}) =>
+  ({statInfo,statData})
+)(ResultStatInfo);

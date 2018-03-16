@@ -1,0 +1,196 @@
+import React from 'react';
+import {ModuleLayout} from 'components';
+
+const menuItems = [
+  {
+    path: 'report/yeardemand',
+    icon: 'fork',
+    title: '年度需求预算',
+    expanded: false,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'company/my',
+        icon: 'api',
+        title: '公司'
+      }, {
+        path: 'unit/my',
+        icon: 'layout',
+        title: '本单位'
+      },
+      {
+        path: 'unit/all',
+        icon: 'layout',
+        title: '各单位'
+      },
+      {
+        path: 'charge/my',
+        icon: 'layout',
+        title: '本部门分管费用'
+      }, {
+        path: 'charge/all',
+        icon: 'layout',
+        title: '各部门分管费用'
+      },
+      {
+        path: 'dept/my',
+        icon: 'layout',
+        title: '本部门'
+      }, {
+        path: 'dept/all',
+        icon: 'layout',
+        title: '各部门'
+      },
+    ]
+  },
+  {
+    path: 'report/yearregular',
+    icon: 'fork',
+    title: '年度正式预算',
+    expanded: false,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'company/my',
+        icon: 'api',
+        title: ' 公司'
+      },
+      {
+        path: 'unit/my',
+        icon: 'layout',
+        title: '本单位'
+      },
+      {
+        path: 'unit/all',
+        icon: 'layout',
+        title: '各单位'
+      }]
+  },
+  {
+    path: 'report/yearresolve',
+    icon: 'fork',
+    title: '年度预算分解',
+    expanded: false,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'company/my',
+        icon: 'api',
+        title: ' 公司'
+      },
+      {
+        path: 'unit/my',
+        icon: 'layout',
+        title: '本单位'
+      },
+      {
+        path: 'unit/all',
+        icon: 'layout',
+        title: '各单位'
+      }]
+  },
+  {
+    path: 'report/itemrealdata',
+    icon: 'fork',
+    title: '实际发生数',
+    expanded: false,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'unit/my',
+        icon: 'api',
+        title: ' 本单位'
+      }, {
+        path: 'unit/all',
+        icon: 'layout',
+        title: '各单位'
+      }]
+  },
+  {
+    path: 'report/analyse',
+    icon: 'fork',
+    title: '预算分析表',
+    expanded: false,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'company/my',
+        icon: 'api',
+        title: '公司'
+      }, {
+        path: 'unit/all',
+        icon: 'layout',
+        title: '本单位'
+      },
+      {
+        path: 'unit/all',
+        icon: 'layout',
+        title: '各单位'
+      },
+      {
+        path: 'charge/all',
+        icon: 'layout',
+        title: '本部门分管费用'
+      }, {
+        path: 'charge/my',
+        icon: 'layout',
+        title: '各部门分管费用'
+      },
+      {
+        path: 'dept/my',
+        icon: 'layout',
+        title: '本部门'
+      }, {
+        path: 'dept/my',
+        icon: 'layout',
+        title: '各部门'
+      },
+    ]
+  },
+  {
+    path: 'config',
+    icon: 'red-envelope',
+    title: '选项配置',
+    expanded: false,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'item',
+        icon: 'api',
+        title: '数据项配置'
+      }, {
+        path: 'represent',
+        icon: 'layout',
+        title: '填报代表配置'
+      }, {
+        path: 'orgmatch',
+        icon: 'layout',
+        title: 'erp机构对应'
+      }, {
+        path: 'itemcharge',
+        icon: 'layout',
+        title: '科目分管配置'
+      }, {
+        path: 'sheet',
+        icon: 'layout',
+        title: '表配置'
+      }, {
+        path: 'sheetgroup',
+        icon: 'layout',
+        title: '报表组'
+      }
+    ]
+  }
+];
+
+const Layout = (props) => {
+  return (
+    < ModuleLayout trigger siderTitle='预算管理' siderIcon='tool' menu={
+      menuItems
+    }
+                   {
+                     ...props
+                   } />)
+}
+
+export default Layout;

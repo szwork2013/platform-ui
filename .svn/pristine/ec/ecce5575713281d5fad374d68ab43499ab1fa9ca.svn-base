@@ -1,0 +1,97 @@
+import React from 'react';
+import {connect} from 'dva';
+import {ModuleLayout} from 'components';
+
+const menuItems = [
+  {
+    path: 'report/yeardemand',
+    icon: 'fork',
+    title: '年度需求预算',
+    expanded: false,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'company/all',
+        icon: 'api',
+        title: '公司年度需求预算'
+      }, {
+        path: 'unit/all',
+        icon: 'layout',
+        title: '单位年度需求预算'
+      }, {
+        path: 'charge/all',
+        icon: 'layout',
+        title: '分管费用年度需求预算'
+      }, {
+        path: 'dept/my',
+        icon: 'layout',
+        title: '部门年度需求预算'
+      }, {
+        path: 'unit/all',
+        icon: 'layout',
+        title: '各单位年度需求预算'
+      }, {
+        path: 'dept/my',
+        icon: 'layout',
+        title: '各部门年度需求预算'
+      }, {
+        path: 'charge/my',
+        icon: 'layout',
+        title: '各分管年度需求预算'
+      }
+    ]
+  }, {
+    path: 'config',
+    icon: 'red-envelope',
+    title: '选项配置',
+    expanded: false,
+    //permission: 'expenditure.admin',
+    children: [
+      {
+        path: 'item',
+        icon: 'api',
+        title: '数据项配置'
+      }, {
+        path: 'represent',
+        icon: 'layout',
+        title: '填报代表配置'
+      }, {
+        path: 'orgmatch',
+        icon: 'layout',
+        title: 'erp机构对应'
+      }, {
+        path: 'itemcharge',
+        icon: 'layout',
+        title: '科目分管配置'
+      }, {
+        path: 'sheet',
+        icon: 'layout',
+        title: '表配置'
+      }, {
+        path: 'sheetrow',
+        icon: 'layout',
+        title: '表行配置'
+      }, {
+        path: 'sheetcol',
+        icon: 'layout',
+        title: '表列配置'
+      }, {
+        path: 'sheetgroup',
+        icon: 'layout',
+        title: '报表组'
+      }
+    ]
+  }
+];
+
+const Layout = (props) => {
+  return (
+  < ModuleLayout trigger siderTitle = '预算管理' siderIcon = 'tool' menu = {
+    menuItems
+  }
+  {
+    ...props
+  } />)
+}
+
+export default Layout;

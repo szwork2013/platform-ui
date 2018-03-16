@@ -1,0 +1,68 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+import config from 'config';
+import service from 'service';
+
+//权限模型定义
+const namespace = {
+  name: 'publication',
+  title:'信息发布',
+  clazz: 'Publication', //模型对应的后台实体类
+  linkAttrs:[]
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+
+    },
+    size: 20, //指定每页记录数
+    sort: 'o.id,desc' //缺省排序规则
+  },
+  form: Form, //使用的表单
+  //打开窗口标题生成器
+  titleRender: (record) => !record||!record.subject ? '新信息发布' :record.subject+'信息发布',
+  effects: {
+    //初始化编号信息
+    *initNumber({ payload }, { call, put, select }) {
+      let {record,href}=payload;
+      let result = yield call(service.httprequest,
+        config.API+'/publication/get_number?year='+new Date().getFullYear(), {});
+      if(!result) result;
+      record.number=result;
+      yield put({
+        type: 'apptabs/updateTab',
+        payload: {
+          key: href,
+          model: {
+            record, state: {
+              origin: Object.assign(record)
+            }
+          }
+        },
+      });
+    },
+
+    //排版
+    *compose({ payload }, { call, put, select }) {
+      let {record}=payload;
+      // let result = yield call(service.httprequest,
+      //   config.API+'/publication/get_number?year='+new Date().getFullYear(), {});
+      // if(!result) result;
+      alert("排版");
+    },
+
+    //阅读
+    *read({ payload }, { call, put, select }) {
+      let {record}=payload;
+      // let result = yield call(service.httprequest,
+      //   config.API+'/publication/get_number?year='+new Date().getFullYear(), {});
+      // if(!result) result;
+      alert("阅读");
+    },
+
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

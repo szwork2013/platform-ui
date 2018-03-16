@@ -1,0 +1,118 @@
+import React from 'react';
+import {Input} from 'antd';
+import {DropdownSelect, View} from 'components';
+import service from 'service'
+import modelDefinition from '../model';
+import {connect} from 'dva';
+
+const modelName = modelDefinition.namespace;
+
+const ViewComponent = (props) => {
+
+
+  const {record, dispatch} = props;
+  let recordId = record && service.getRecordId(record);
+  let recordUrl = record && service.getHrefOfLinkAttr(record);
+  //定义操作条属性
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    newRow: false,
+    delete: true, //显示删除按钮
+    buttons: [{
+      title: '新增', OnClick: () => {
+        dispatch({
+          type: 'sheetrow/addRows',
+          payload: {
+            sheetUrl: recordUrl,
+            dataKey: recordId
+          }
+        });
+      }
+    }]
+  }
+
+
+  let where = '1=1';
+  if (recordId && recordId !== -1) {
+    where += 'and o.sheet.id=' + recordId;
+  }
+
+  let searchParam = { //搜索条件
+    filter: { //过滤规则
+      clazz: 'SheetRow', //模型对应的后台实体类
+      where: where, //条件
+    },
+    size: 20, //指定每页记录数
+    sort: 'o.id,desc' //缺省排序规则
+  }
+
+  const itemProps = {
+    type: 'list',
+    labelKey: 'name',
+    modelName: 'budget_item',
+    searchParam: {
+      filter: {
+        where: '',
+      },
+      sort: 'o.sortNo,asc',
+      size: 1000,
+    },
+  };
+
+  const parentUrl = service.constructRecordUrl({modelName: 'sheetrow', id: ''});
+  //定义列表属性
+  const listProps = {
+    columns: [ // 和antd table组件的列定义相同
+      {title: 'Id', width: 100, dataIndex: 'id', fulltext: false, key: 'id'},
+      {
+        title: '上级行', width: 300, dataIndex: 'parent', key: 'parent', editor: <Input placeholder={`格式:${parentUrl}Id`}/>,
+        fulltext: false,
+        textRender: (value, record) => {
+          if (record.parentId) {
+            record.parent = parentUrl+record.parentId;
+            return record.parent;
+          }
+          return '';
+        },
+      },
+      {title: '显示名称', width: 100, dataIndex: 'name', key: 'name', editor: <Input/>},
+      {
+        type: 'select', title: '数据项', width: 130, dataIndex: 'item', key: 'item',
+        fulltext: 'item.name',
+        editor: <DropdownSelect {...itemProps} />,
+        textRender: (value, record) => {
+          if (record.itemId) {
+            let href = service.constructRecordUrl({modelName: 'budget_item', id: record.itemId});
+            record.item = record.item ? record.item : href;
+          }
+          return record.itemName
+        },
+      },
+      {title: '行号', width: 100, dataIndex: 'rowNum', key: 'rowNum', editor: <Input/>},
+      {title: '排序号', width: 100, dataIndex: 'pyXuHao', key: 'pyXuHao', editor: <Input/>},
+      {title: '计算公式', width: 200, dataIndex: 'formula', key: 'formula', editor: <Input/>},
+      {title: '权限编码', width: 100, dataIndex: 'permission', key: 'permission', editor: <Input/>},
+    ],
+    rowSelection: {},
+  };
+
+  //翻页器属性
+  const paginationBarProps = {};
+
+  return (
+    <View key={modelName + 'ViewLayout'} {...props}
+          editMode='row' //编辑模式：单行编辑
+          modelName={modelName} //模型名称
+          searchParam={searchParam}
+          actionBar={actionBarProps} //操作条定义
+          list={listProps} //列表定义
+          uid={recordId}
+          paginationBar={paginationBarProps}
+    />
+  )
+}
+
+
+export default connect(({sheetrow, loading}) =>
+  ({sheetrow, loading: loading.models[modelName]})
+)(ViewComponent);

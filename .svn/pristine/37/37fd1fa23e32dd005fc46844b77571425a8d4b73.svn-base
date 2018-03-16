@@ -1,0 +1,23 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+//权限模型定义
+const namespace = {
+  name: 'expenditure_payee',
+  title:'收款人',
+  clazz: 'Payee',
+  linkAttrs: [],
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: {
+    },
+    size: 1000, //指定每页记录数
+  },
+  form: Form, //使用的表单
+  //打开窗口标题生成器
+  titleRender: (record) => !record ? '新收款人' :'收款人：'+record.text,
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

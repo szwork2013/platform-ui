@@ -1,0 +1,138 @@
+import React from 'react';
+
+import service from 'service';
+
+import { Form as FormLayout, FormItem, DropdownSelect } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+//const Row = FormContainer.StyledRow;
+
+//引入styled组件
+import {
+  StyledHeaderDiv,
+} from './styled';
+import {
+  StyledTable as Table, 
+  StyledTr as Row,
+  StyledLabelTd as LabelCol,
+  StyledTd as Col,
+} from '../../../styled';
+//权限定义表单
+const EmbeddedForm = (props) => {
+  //1 解构参数
+  let {
+    model, //FormContainer注入：模型
+    canEdit = true, //FormContainer注入：是否可编辑
+    getFieldDecorator,
+    setFieldsValue,
+    dispatch,
+  } = props;
+
+  const { record, state } = model;
+
+  //2 构造FormItem的公共参数
+  const itemProps = { canEdit, setFieldsValue, getFieldDecorator };
+  const oneItem = ['96%','10%','90%'];
+  const threeItem = ['32%','30%','61%'];
+  //item宽度样式
+  const itemWidth = ['100%','0%','100%'];
+
+  //3 构造发布单位选项的搜索参数
+  const orgsSearchParam= { //搜索条件
+    filter: { //过滤规则
+    },
+    size: 1000, //指定每页记录数
+    sort: 'o.sortNo,asc' //缺省排序规则
+  };
+
+  //4 构造分类选项的搜索参数
+
+	//5 显示UI
+	return (
+    <Form layout='inline'>
+        <StyledHeaderDiv>部门年度需求预算</StyledHeaderDiv>
+      <Table>
+        <Row>
+          <LabelCol>年度</LabelCol>
+          <Col colSpan={6}>
+            <FormItem title='年度' type='Input' {...itemProps} width={itemWidth}
+              itemKey='year' initialValue={record.year}
+            />
+          </Col>
+          <LabelCol>版本号</LabelCol>
+          <Col colSpan={6}>
+            <FormItem title='版本号' type='Input' {...itemProps} width={itemWidth}
+              itemKey='version' initialValue={record.version}
+            />
+          </Col>
+          <LabelCol>备注</LabelCol>
+          <Col colSpan={6}>
+            <FormItem title='备注' type='Input' {...itemProps} width={itemWidth}
+              itemKey='remark' initialValue={record.remark}
+            />
+          </Col>          
+        </Row>
+      </Table>
+    </Form>
+	);
+
+  //处理机构被选中事件
+  function handleOrgOnSelect(value, node) {
+    //构造分类搜索参数
+    let orgId = node && node.props.dataRef.id;
+    let searchParam = constructCategorySearchParam(record, orgId);
+
+    //发送消息让分类选择组件刷新选项数据
+    DropdownSelect.queryData({
+      controlId: 'category',
+      dispatch,
+      searchParam,
+      modelName: 'institution_categories',
+      type: 'Tree',
+    });
+  }
+
+  //处理机构变化事件
+  function handleOrgOnChange(value) {
+    record.category = '';
+
+    //情形1：选择了发布机构，onSelect事件已处理，这里就不处理了
+    if (value) return;
+
+    //情形2：未选择发布机构，清空分类的选项
+    //构造分类搜索参数
+    let orgId = -1; 
+    let searchParam = constructCategorySearchParam(record, orgId);
+
+    //发送消息让分类选择组件刷新选项数据
+    DropdownSelect.queryData({
+      controlId: 'category',
+      dispatch,
+      searchParam,
+      modelName: 'institution_categories',
+      type: 'Tree',
+    });
+  }
+
+  //构造分类搜索参数
+  function constructCategorySearchParam(record, orgId) {
+    //分类所属机构的id
+    let org = service.getRecordLinkAttr(record, 'publishedOrg');
+    let categoryOrgId = orgId ? orgId : org&&org.id;
+
+    //构造搜索条件
+    let where = categoryOrgId ? 'o.org.id='+categoryOrgId : '1=2'
+
+    let categorySearchParam= { //搜索条件
+      filter: { //过滤规则
+        where: where,
+      },
+      size: 1000, //指定每页记录数
+      sort: 'o.sortNo,asc' //缺省排序规则
+    };
+
+    return categorySearchParam;
+  }
+}
+
+export default EmbeddedForm;

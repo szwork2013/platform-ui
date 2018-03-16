@@ -1,0 +1,27 @@
+//服务接口
+const service = {
+  //枚举转换
+  convertTypeToString: (type) => {
+    if (type == 'IT_CONSUMABLE'||type==0) return 'IT耗材';
+    if (type == 'OFFICE_EQUIPMENT'||type==1) return 'IT办公设备';
+    if (type == 'NON_INSTALLATION_EQUIPMENT'||type==2) return '非安装设备';
+    if (type == 'PRODUCTION_EQUIPMENT'||type==3) return 'IT生产设备';
+    if (type == 'ENGINEERING_MATERIALS'||type==4) return '工程物资';
+    if (type == 'OFFICE_SUPPLIES'||type==5) return '办公用品';
+    if (type == 'LABOUR_SUPPLIES'||type==6) return '劳保用品';
+    return type;
+  },
+
+  //枚举转换
+  convertTypeToInt: (type) => {
+    if (type == 'IT_CONSUMABLE'||type==0) return 0;
+    if (type == 'OFFICE_EQUIPMENT'||type==1) return 1;
+    if (type == 'NON_INSTALLATION_EQUIPMENT'||type==2) return 2;
+    if (type == 'PRODUCTION_EQUIPMENT'||type==3) return 3;
+    if (type == 'ENGINEERING_MATERIALS'||type==4) return 4;
+    if (type == 'OFFICE_SUPPLIES'||type==5) return 4;
+    if (type == 'LABOUR_SUPPLIES'||type==6) return 6;
+    return type;
+  },
+}
+export default service;

@@ -1,0 +1,56 @@
+import {
+  View,
+} from 'components';
+
+import modelDefinition from '../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+const ViewComponent = ( props ) => {
+ //定义操作条属性
+  const actionBarProps = {
+    new: true, //显示新增按钮
+    delete: true, //显示删除按钮
+    newRow:false,
+  }
+
+  //定义列表属性
+  const listProps = {
+    columns:[ // 和antd table组件的列定义相同
+      { title: '序号', width: 80, dataIndex: 'sortNo', key: 'sortNo',sorter: true },
+      { title: '分类名称', dataIndex: 'name', key: 'name', link: 'edit', sorter: true },
+      
+    ],
+    rowSelection: {}, //选择功能配置
+    defaultExpandAllRows: true,
+  };
+  //搜索条件
+  const searchParam = {
+    filter: { //过滤规则
+    },
+    sort: 'o.sortNo,asc',
+    size: 1000, //指定每页记录数
+    treedata: true,
+  };
+
+
+  //翻页器属性
+  const paginationBarProps = {};
+
+  return (
+    <View key={modelName+'ViewLayout'} {...props}
+      searchParam={searchParam}
+      modelName={modelName} //模型名称
+      actionBar={actionBarProps} //操作条定义
+      paginationBar={paginationBarProps} //翻页器定义
+      list={listProps} //列表定义
+    />
+  )
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({leave_categories, loading, apptabs:{tabs}}) =>
+  ({leave_categories, loading: loading.models[modelName], tabs})
+)(ViewComponent);

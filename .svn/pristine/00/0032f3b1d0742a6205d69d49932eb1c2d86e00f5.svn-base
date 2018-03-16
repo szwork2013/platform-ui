@@ -1,0 +1,104 @@
+import {Col, Input, Button, Icon, Popover} from 'antd';
+import { Form as FormLayout, FormItem } from 'components';
+
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+const Search = Input.Search;
+
+
+//选项设置表单
+const OptionsForm = ( props ) => {
+  //解构参数
+  let {
+    conditionData={}, //条件数据
+    dispatch,
+    yearOptions=[],
+  } = props;
+
+  //构造FormItem的公共参数
+  const oneItemWidth = ['96%','10%','90%'];
+
+  const { getFieldDecorator, setFieldsValue } = props.form;
+  const itemProps = { canEdit: true, getFieldDecorator,setFieldsValue,
+    width: oneItemWidth, required: false,
+  };
+
+  return (
+    <Form layout='inline' style={{height:'40px'}}>
+      <Row>
+        <Col span={3}>
+          {renderYearSelect(yearOptions)}
+        </Col>
+        <Col span={3}>
+          {renderFilterSelect()}
+        </Col>
+      </Row>
+    </Form>
+  )
+
+
+  //构造年度选择组件
+
+  //构造年度选择组件
+  function renderYearSelect() {
+    //构造年度的选项
+    let date=new Date();
+    let curYear=date.getFullYear();
+    let options=[];
+    for(let i=0;i<yearOptions.length;i++){
+      let option={'id':yearOptions[i],'name':yearOptions[i]};
+      options.push(option);
+    }
+    return(
+      <FormItem type='Select' initialValue={conditionData.year}  required={false}
+                title='' options={options} {...itemProps} itemKey='year' placeholder='选择年度'
+      />
+    );
+  }
+
+  //构造关键字过滤组件
+  function renderFilterSelect() {
+    return(
+      <Search
+        placeholder="请输入过滤指标关键字"
+        onSearch={value => props.dispatch({
+          type: 'indicator_yearlyindicator/changeConditionData',
+          payload: {value}
+        })}
+        style={{ width: 260 }}
+
+      />
+    );
+  }
+}
+
+//表单字段被修改事件处理
+const onFieldsChange = (props, fields) => {
+  //解构参数
+  const {
+    dispatch,
+  } = props;
+
+  let changed = false;
+  let changedData = {};
+  for(let x in fields) {
+    changedData[fields[x].name] = fields[x].value;
+    changed = true;
+  }
+  if (changed) {
+    //发消息通知模型条件发生变化
+    dispatch({
+      type: 'indicator_yearlyindicator/changeConditionData',
+      payload: {...changedData}
+    })
+  }
+}
+
+import { Form as AntdForm } from 'antd';
+const antdOptionsForm = AntdForm.create({
+  onFieldsChange: onFieldsChange
+})(OptionsForm);
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+export default antdOptionsForm;

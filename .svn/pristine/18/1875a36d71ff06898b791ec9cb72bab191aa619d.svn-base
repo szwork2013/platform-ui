@@ -1,0 +1,22 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+//权限模型定义
+const namespace = {
+  name: 'expenditure_redheaddoc',
+  title:'红头文件',
+  clazz: 'RedHeadDocument',
+  linkAttrs: [],
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: {
+    },
+  },
+  form: Form, //使用的表单
+  //打开窗口标题生成器
+  titleRender: (record) => !record ? '新红头文件' :'红头文件：'+record.name,
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

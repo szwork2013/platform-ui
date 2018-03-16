@@ -1,0 +1,87 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+import { config} from 'utils';
+const { api } = config; //取得RESTful api配置信息
+import service from 'service';
+//模型定义
+const namespace = {
+  name: 'budget_report',
+  title:'预算',
+  clazz: 'Report',
+};
+const modelParam = {
+  state:{
+
+  },
+  form: Form, //使用的表单
+    effects: {
+    // 获取报表配置信息
+    *convert({type,payload}, {call, put,select}) {
+      debugger;
+      const { rootPath } = api; //RESTful请求的根路径
+      let url=rootPath+'/dataconverter/convert';
+      service.queryRecord(url, {});
+    },
+    //表单消息：填报部门年度需求预算
+    *newYearDemand({payload}, { call, put,select }) {
+      //解构消息
+      let { record,orgLevel } = payload;
+
+      //查询有没有创建过，没有创建就创建一条新的数据
+      const user = service.userInfo.user;
+      let reportRecord=yield call(service.queryRecord,
+        config.API+'/budget_reportView/getMyOrgReport?orgId='
+        +user.org.id+'&year='+record.year+'&reporType='
+        +record.reportType+'&periodType='+record.periodType+'&orgLevel='+record.orgLelvel+'&version='+record.versions)
+      if(!reportRecord)
+      {
+        let entityLink=service.getHrefOfLinkAttr(record);
+        let newRecord = {
+          reportType:record.reportType,
+          periodType:record.periodType,
+          orgLevel:orgLevel,
+          version:record.version,
+        };
+        let model = {record:newRecord, state:{mode:'new', origin:newRecord}}
+        let processNo='YEARDEMANDCOMPANY';
+        if(record.reportType==0&&record.periodType==0&&record.orgLevel==1){
+            processNo='YEARDEMANDUNIT';    
+        }   
+        if(record.reportType==0&&record.periodType==0&&record.orgLevel==2){
+            processNo='YEARDEMANDCHARGE';    
+        }   
+        if(record.reportType==0&&record.periodType==0&&record.orgLevel==3){
+            processNo='YEARDEMANDDEPT';    
+        }  
+        yield put({
+          type: 'bueget_report/new',
+          payload: {processNo:processNo,
+            parentInstanceId:wfservice.getInstanceId(record),
+            parentInstanceEntityLink:entityLink,model}
+        })
+
+      }else{
+        reportRecord._links={};
+        reportRecord._links.self={};
+        reportRecord._links.self.href= service.constructRecordUrl({ modelName: 'department_plan', id: departmentPlanRecord.id });
+        yield put({
+          type: 'bueget_report/open',
+          payload: {record:reportRecord,state:{mode:'edit'}}
+        })
+      }
+    },
+
+    //表单消息：汇总预算
+    *summaryBudget ({payload}, { call, put,select }) {
+      //解构消息
+      let { record,sourceOrgLevel,summaryType} = payload;
+      let recordId=service.getRecordId(record);
+      let reportRecord=yield call(service.queryRecord,
+        config.API+'/budget_reportView/summaryBudget?reportId='
+        +recordId+'&sourceOrgLevel='+sourceOrgLevel+'&summaryType='+summaryType)
+    },
+
+  },// end of effects
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

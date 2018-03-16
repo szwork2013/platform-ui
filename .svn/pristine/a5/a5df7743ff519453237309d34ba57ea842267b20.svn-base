@@ -1,0 +1,100 @@
+import { Form as FormLayout, FormItem } from 'components';
+import service from 'service';
+import wfservice from 'wfservice';
+import {Popover, Button, Tabs, Icon} from 'antd';
+import {
+  StyledHeaderDiv,
+} from '../styled';
+const FormContainer = FormLayout.FormContainer;
+const Form = FormContainer.StyledForm;
+const Row = FormContainer.StyledRow;
+const TabPane = Tabs.TabPane;
+//权限定义表单
+const EmbeddedForm = (props) => {
+	//解构参数
+	let {
+    model, //Form注入：模型
+    canEdit = true, //Form注入：是否可编辑
+    getFieldDecorator,
+    setFieldsValue,
+    getFieldValue,
+    formCanEdit,
+    dispatch,
+  } = props;
+  const { record, state} = model;
+  //获取创建人
+  let creator = service.getRecordLinkAttr(record,'createdBy');
+  let creatorOrgId = undefined;
+  //获取创建人所属机构id
+  if(creator){
+    creatorOrgId = creator.orgId;
+  }
+  //如果没有创建人，则创建人是当前登陆人
+  if(!creatorOrgId){
+    creatorOrgId=service.userInfo.user.org.id;
+  }
+
+  //构造FormItem的公共参数
+  const itemProps = { canEdit:formCanEdit, getFieldDecorator,setFieldsValue,getFieldValue};
+  const oneItemWidth = ['96%','10%','90%'];
+  const twoItemWidth = ['47.6%', '20%', '80%'];
+  const threeItemWidth = ['32%', '30%', '70%'];
+  const fourItemWidth = ['24%', '40%', '60%'];
+
+  const user = service.userInfo.user;
+
+  function info (){
+    if(record.taskState!=='PROCEED'){
+      return (
+        <h3 style={{color:'red', textAlign:'center'}}>该任务已申请办结，不能进行反馈。</h3>
+      );
+    }
+  }
+	//显示UI
+	return (
+    <Form layout='inline'>
+      <Row>
+        <FormItem type='Input' {...itemProps} width={twoItemWidth}
+          title='任务名称' itemKey='taskName' initialValue={record.taskName}
+          required={false} canEdit = {false}
+        />
+        <FormItem type='Input' {...itemProps} width={twoItemWidth}
+          title='完成期限' itemKey='taskDeadline' initialValue={record.taskDeadline}
+          required={false} canEdit = {false}
+        />
+      </Row>
+      <Row>
+        <FormItem type='TextArea' {...itemProps} width={oneItemWidth}
+          title='任务描述' itemKey='taskDescription' initialValue={record.taskDescription}
+          required={false} canEdit = {false}
+        />
+      </Row>
+      <Row>
+        <FormItem type='TextArea' {...itemProps} width={oneItemWidth}
+          title='上周工作计划' itemKey='lastWeekWorkPlan' initialValue={record.lastWeekWorkPlan}
+          required={false} canEdit = {false}
+        />
+      </Row>
+      <Row>
+        <FormItem type='TextArea' {...itemProps} width={oneItemWidth}
+          title='本周完成情况' itemKey='workLog' initialValue={record.workLog}
+        />
+      </Row>
+      <Row>
+        <FormItem type='TextArea' {...itemProps} width={oneItemWidth}
+          title='下周工作计划' itemKey='workPlan' initialValue={record.workPlan}
+        />
+      </Row>
+      <Row>
+        <FormItem title='附件信息' type='Attachment' {...itemProps} width={oneItemWidth} multiple
+          itemKey='_files' link={service.parseRecordUrl(record)} mode={state.mode} required={false}
+        />
+      </Row>
+      {
+        info()
+      }
+    </Form>
+	);
+}
+
+export default EmbeddedForm;

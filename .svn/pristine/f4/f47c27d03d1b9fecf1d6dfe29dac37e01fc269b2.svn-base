@@ -1,0 +1,189 @@
+import {config, modelTemplate} from 'utils';
+import Form from './Form';
+import service from 'service';
+import wfservice from 'wfservice';
+
+const { api } = config; //取得RESTful api配置信息
+//模型定义
+const namespace = {
+  name: 'budget_report',
+  title:'预算',
+  clazz: 'Report',
+};
+const modelParam = {
+  titleRender: (record) => {
+    if(record.year&&record.month){
+      return record.year+'年'+record.month+'月'+'预算';
+    }
+    if(record.year&&record.month==undefined){
+      return record.year+'年预算';
+    }
+      return '新预算';
+  },
+  state:{
+
+  },
+  form: Form, //使用的表单
+    effects: {
+    // 获取报表配置信息
+    *convert({type,payload}, {call, put,select}) {
+      const { rootPath } = api; //RESTful请求的根路径
+      let url=rootPath+'/dataconverter/convert';
+      service.queryRecord(url, {});
+    },
+    //表单消息：填报部门年度需求预算
+    *newYearDemand({payload}, { call, put,select }) {
+      //解构消息
+      let { record,orgLevel } = payload;
+      let representOrgIds=yield call(service.queryRecord,config.API+'/budget_reportView/getRepresentOrgIds?orgId='+orgId);
+      //查询有没有创建过，没有创建就创建一条新的数据
+      const user = service.userInfo.user;
+      let reportRecord=yield call(service.queryRecord,
+        config.API+'/budget_reportView/getMyOrgReport?orgId='
+        +user.org.id+'&year='+record.year+'&reportType='
+        +record.reportType+'&periodType='+record.periodType+'&orgLevel='+orgLevel+'&version='+record.version);
+      if(!reportRecord)
+      {
+        let entityLink=service.getHrefOfLinkAttr(record);
+        let newRecord = {
+          year:record.year,
+          reportType:record.reportType,
+          periodType:record.periodType,
+          orgLevel:orgLevel,
+          version:record.version,
+        };
+        let model = {record:newRecord, state:{mode:'new', origin:newRecord}}
+        let processNo='YEARDEMANDCOMPANY';
+        if(record.reportType==0&&record.periodType==0&&record.orgLevel==1){
+            processNo='YEARDEMANDUNIT';
+        }
+        if(record.reportType==0&&record.periodType==0&&record.orgLevel==2){
+            processNo='YEARDEMANDCHARGE';
+        }
+        if(record.reportType==0&&record.periodType==0&&record.orgLevel==3){
+            processNo='YEARDEMANDDEPT';
+        }
+        yield put({
+          type: 'budget_report/new',
+          payload: {
+            processNo:processNo,
+            parentInstanceId:wfservice.getInstanceId(record),
+            parentInstanceEntityLink:entityLink,
+            model
+          }
+        })
+
+      }else{
+        reportRecord._links={};
+        reportRecord._links.self={};
+        reportRecord._links.self.href= service.constructRecordUrl({ modelName: 'budget_report', id: reportRecord.id });
+        yield put({
+          type: 'budget_report/open',
+          payload: {record:reportRecord,state:{mode:'edit'}}
+        })
+      }
+    },
+    *newReport({payload}, { call, put,select }) {
+      //解构消息
+      let { record,orgLevel } = payload;
+      let reportType=record.reportType;
+      let periodType=record.periodType;
+      let orgLevelVal=record.orgLevel;
+      //查询有没有创建过，没有创建就创建一条新的数据
+      const user = service.userInfo.user;
+      let reportRecord=yield call(service.queryRecord,
+        config.API+'/budget_reportView/getMyOrgReport?orgId='
+        +user.org.id+'&year='+record.year+'&month='+record.month+'&reportType='
+        +record.reportType+'&periodType='+record.periodType+'&orgLevel='+orgLevel+'&version='+record.version);
+      if(!reportRecord)
+      {
+        let entityLink=service.getHrefOfLinkAttr(record);
+        let newRecord = {
+          year:record.year,
+          reportType:record.reportType,
+          periodType:record.periodType,
+          orgLevel:orgLevel,
+          version:record.version,
+        };
+        let model = {record:newRecord, state:{mode:'new', origin:newRecord}}
+        let processNo='YEARDEMANDCOMPANY';
+        if(record.reportType==0&&record.periodType==0&&record.orgLevel==1){
+            processNo='YEARDEMANDUNIT';    
+        }   
+        if(record.reportType==0&&record.periodType==0&&record.orgLevel==2){
+            processNo='YEARDEMANDCHARGE';    
+        }   
+        if(record.reportType==0&&record.periodType==0&&record.orgLevel==3){
+            processNo='YEARDEMANDDEPT';    
+        }  
+        yield put({
+          type: 'budget_report/new',
+          payload: {
+            processNo:processNo,
+            parentInstanceId:wfservice.getInstanceId(record),
+            parentInstanceEntityLink:entityLink,
+            model
+          }
+        })
+
+      }else{
+        reportRecord._links={};
+        reportRecord._links.self={};
+        reportRecord._links.self.href= service.constructRecordUrl({ modelName: 'budget_report', id: reportRecord.id });
+        yield put({
+          type: 'budget_report/open',
+          payload: {record:reportRecord,state:{mode:'edit'}}
+        })
+      }
+    },
+
+    //表单消息：汇总预算
+    *summaryBudget ({payload}, { call, put,select }) {
+      //解构消息
+      let { record,sourceOrgLevel,summaryType} = payload;
+      let recordId=service.getRecordId(record);
+      let reportRecord=yield call(service.queryRecord,
+        config.API+'/budget_reportView/summaryBudget?reportId='
+        +recordId+'&sourceOrgLevel='+sourceOrgLevel+'&summaryType='+summaryType)
+    },
+
+    //获取代表机构id集合
+    *getRepresentOrgIds ({payload}, { call, put,select }) {
+      //解构消息
+        let {orgId} = payload;
+        let representOrgIds=yield call(service.queryRecord,
+          config.API+'/budget_reportView/getRepresentOrgIds?orgId='+orgId);
+        return representOrgIds;
+      },
+     //获取部门层级填报记录
+    *getdeptReports ({payload}, { call, put,select }) {
+      //解构消息
+      let {orgId,dataKey,reportType,periodType,orgLevel} = payload;
+      let representOrgIds=yield call(service.queryRecord,
+          config.API+'/budget_reportView/getRepresentOrgIds?orgId='+orgId);
+      let where='o.reportType='+reportType+' and o.periodType='+periodType+' and o.orgLevel='+orgLevel;
+      if(representOrgIds){
+        where+=' and o.createdBy.org.id in('+representOrgIds+')';
+      }
+      let searchParam={ //搜索条件
+        linkAttrs:[],
+        filter: { //过滤规则
+          clazz: 'Report', //模型对应的后台实体类
+          where:where
+        },
+        size: 20, //指定每页记录数
+        sort: 'o.createdTime,desc' //缺省排序规则
+      }
+       yield put({
+          type: 'query',
+          payload: {
+            searchParam,
+            dataKey:dataKey
+          }
+        });
+    },
+
+  },// end of effects
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

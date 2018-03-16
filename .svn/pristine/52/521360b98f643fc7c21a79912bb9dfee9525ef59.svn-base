@@ -1,0 +1,82 @@
+import React from 'react';
+
+import {Row, Col} from 'antd';
+
+import { ModuleLayout } from 'components';
+
+import CategoryTree from './CategoryTree'
+import OptionsForm from './OptionsForm'
+import ResultView from './ResultView'
+
+import service from 'service';
+import {constructBudgetSource} from '../service';
+
+//取得模型名称
+import modelDefinition from '../../execution/model';
+const modelName = modelDefinition.namespace;
+
+class DraftForm extends React.Component {
+  //进入组件路由
+  componentDidMount() {
+   //解构参数
+    const {
+      dispatch,
+      match,
+    } = this.props;
+
+    //获取支持性质
+    const expenditureType = service.getRouteParam({match, paramName:'expenditureType'});
+    if (!expenditureType) return;
+
+    //初始化选项数据
+    dispatch({ type: 'expenditure_modifyform/initialize',payload:{expenditureType}});
+  }
+
+  render() {
+    const props=this.props;
+    const {
+      conditionData,
+      statInfo,
+      match,
+    } = props;
+
+    //获取支出性质
+    const expenditureType = service.getRouteParam({match, paramName:'expenditureType'});
+
+    //计算组件的高度
+    const layoutHeight = ModuleLayout.theme.content.height();
+    let formHeight = 40;
+    const treeHeight = layoutHeight - formHeight;
+
+    const treeHelpVisble = conditionData.fundSource&&!conditionData.category;
+
+    return (
+      <Row>
+        <Col span={4}>
+          <div style={{backgroundColor:'#fbfbfb', height: treeHeight,overflow:'auto'}}>
+            <CategoryTree expenditureType={expenditureType}/>
+          </div>
+        </Col>
+        <Col span={20}>
+           {/*选择项目或年度*/}
+          <div style={{backgroundColor:'#ebf8f9',height:formHeight}}>
+            <OptionsForm expenditureType={expenditureType}/>
+          </div>
+          {/*显示符合条件的记录*/}
+          <ResultView
+            expenditureType={expenditureType}
+            modelName={modelName}
+          />
+        </Col>
+      </Row>
+    )
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({
+  expenditure_modifyform:{conditionData, statInfo}
+}) =>
+  ({conditionData, statInfo})
+)(DraftForm);

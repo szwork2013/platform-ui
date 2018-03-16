@@ -1,0 +1,35 @@
+import {Form} from 'components'
+import {connect} from 'dva';
+
+const Layout = (props) => {
+  //按钮条配置
+  const actionBar = {
+    save: true, //显示保存按钮
+    saveAndClose: true, //显示保存并关闭按钮
+    edit: true, //显示编辑按钮
+    close: true, //显示关闭按钮
+  };
+
+  const {record, state} = props.model;
+
+  //表单配置
+  const embeddedForm = [
+    {row: 1, type: 'Input', title: 'ERP名称', key: 'itemCode'},
+    {row: 2, type: 'Input', title: 'ERP编码', key: 'itemName'},
+    {row: 3, type: 'Number', title: '数据项值', key: 'itemValue'},
+    {row: 3, type: 'Input', title: 'ERP部门编码', key: 'deptCode'},
+    {row: 3, type: 'Input', title: '所属单位ID', key: 'unitId'},
+    {row: 3, type: 'Number', title: '用途类型 ', key: 'useType'},
+    {row: 3, type: 'Number', title: '年度 ', key: 'year'},
+    {row: 3, type: 'Number', title: '月份 ', key: 'month'},
+  ];
+
+  //显示UI
+  return (
+    <Form actionBar={actionBar} embeddedForm={embeddedForm} {...props} />
+  );
+}
+
+export default connect(({apptabs, loading}) =>
+  ({apptabs, loading: loading.models.budget_itemrealdata})
+)(Layout);

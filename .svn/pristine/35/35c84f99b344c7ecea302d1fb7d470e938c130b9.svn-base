@@ -1,0 +1,265 @@
+import React from 'react';
+import {Col,Button} from 'antd';
+
+import { Form as FormLayout, FormItem } from 'components';
+const FormContainer = FormLayout.FormContainer;
+const Row = FormContainer.StyledRow;
+
+import {formDate} from 'utils';
+import wfservice from 'wfservice';
+
+//权限定义表单
+class PlanContent extends React.Component{
+
+  componentDidMount() {
+
+  }
+
+
+
+  render(){
+    //解构参数
+    let {
+      record, //FormContainer注入：模型
+      canEdit = true, //FormContainer注入：是否可编辑
+      getFieldDecorator,
+      setFieldsValue,
+      planType,
+      department,
+    } = this.props;
+
+    //构造FormItem的公共参数
+    const itemProps = { canEdit, required: canEdit,
+      getFieldDecorator, setFieldsValue,
+    };
+    const itemWidth = ['96%','10%','90%'];
+    const twoItemWidth = ['48%','20%','80%'];
+    const threeItemWidth = ['32%', '30%', '70%'];
+    const fourItemWidth = ['24%', '40%', '60%'];
+    const fiveItemWidth = ['19%', '40%', '60%'];
+
+    //设置数字格式
+    const inputNumberProps = {
+      precision:0,
+      size: 'medium',
+    }
+
+   // 非编辑状态
+  if(!canEdit){
+      //公司计划
+  if(planType==0){
+    if(record.type=='ENGINEERING_MATERIALS'||record.type==4){
+    return (
+        <div>
+      <Row>
+        <Col span={8}>
+          部门(单位)提交截止日期：{formDate(record.endDate)}
+        </Col>
+        <Col span={8}>
+          编报部门(单位)：{record.orgName}
+        </Col>
+      </Row>
+      <Row>
+       <Col span={24} style={{textAlign:'center'}}>
+      (套管具体要求见附件)
+       </Col>
+      </Row>
+     </div>
+      )
+        }
+   return (
+    <Row>
+      <Col span={5}>
+        部门(单位)提交截止日期：{formDate(record.endDate)}
+      </Col>
+      <Col span={5}>
+        交货日期：{formDate(record.deliveryDate)}
+      </Col>
+      <Col span={5}>
+        交货地点：{record.deliveryPoint}
+      </Col>
+      <Col span={5}>
+        编报部门(单位)：{record.orgName}
+      </Col>
+      <Col span={4}>
+        备注：{record.remark}
+      </Col>
+    </Row>
+      )
+      }
+
+    //部门计划
+    if(planType==2){
+    //没有通过审核之前
+      let afterReview=wfservice.authz(department, ['afterReview'])
+      if(!afterReview){
+        //其他类型
+        return (
+          <div>
+            <Row>
+              <FormItem type='InputNumber' {...itemProps} width={fiveItemWidth}
+                        title='年度' itemKey='year' initialValue={record.year}
+                        placeholder='' controlProps={{...inputNumberProps}} min={1900} max={9999}
+              />
+              <FormItem type='InputNumber' {...itemProps} width={fiveItemWidth}
+                        title='月份' itemKey='month' initialValue={record.month}
+                        placeholder='' controlProps={{...inputNumberProps}} min={1} max={12}
+              />
+              <FormItem type='InputNumber' {...itemProps} width={fiveItemWidth}
+                        title='批次' itemKey='batchNo' initialValue={record.batchNo}
+                        placeholder='' controlProps={{...inputNumberProps}}
+              />
+              <FormItem title='截止时间' type='DatePicker' showTime={false} {...itemProps} width={fiveItemWidth}
+                        itemKey='endDate' initialValue={record.endDate||undefined}
+              />
+              <FormItem type='Input' {...itemProps} width={fiveItemWidth}
+                        title='备注' itemKey='remark' initialValue={record.remark}
+                        placeholder=''
+                        required={false}
+              />
+            </Row>
+          </div>
+        );
+        //工程物资 非便捷状态显示
+        if(record.type=='ENGINEERING_MATERIALS'||record.type==4){
+          return (
+            <div>
+              <Row>
+                <FormItem type='InputNumber' {...itemProps} width={fourItemWidth}
+                          title='年度' itemKey='year' initialValue={record.year}
+                          placeholder='' controlProps={{...inputNumberProps}} min={1900} max={9999}
+                />
+                <FormItem type='InputNumber' {...itemProps} width={fourItemWidth}
+                          title='批次' itemKey='batchNo' initialValue={record.batchNo}
+                          placeholder='' controlProps={{...inputNumberProps}}
+                />
+                <FormItem title='截止时间' type='DatePicker' showTime={false} {...itemProps} width={fourItemWidth}
+                          itemKey='endDate' initialValue={record.endDate||undefined}
+                />
+                <FormItem type='Input' {...itemProps} width={fourItemWidth}
+                          title='备注' itemKey='remark' initialValue={record.remark}
+                          placeholder=''
+                          required={false}
+                />
+              </Row>
+            </div>
+          );
+        }
+      }
+
+    }
+   //其他部门计划和单位计划
+    return (
+    <Row>
+      <Col span={19}>
+        部门(单位)提交截止日期：{formDate(record.endDate)}
+      </Col>
+      <Col span={5}>
+        编报部门(单位)：{record.orgName}
+      </Col>
+    </Row>
+      )
+    }
+
+//显示UI 编辑状态
+    //公司计划
+  if(planType==0){
+    //工程物资
+    if(record.type=='ENGINEERING_MATERIALS'||record.type==4){
+    return (
+      <div>
+        <Row>
+          <FormItem type='InputNumber' {...itemProps} width={fourItemWidth}
+                    title='年度' itemKey='year' initialValue={record.year}
+                    placeholder='' controlProps={{...inputNumberProps}} min={1900} max={9999}
+          />
+          <FormItem type='InputNumber' {...itemProps} width={fourItemWidth}
+                    title='批次' itemKey='batchNo' initialValue={record.batchNo}
+                    placeholder='' controlProps={{...inputNumberProps}}
+          />
+          <FormItem title='填报截止日期' type='DatePicker' showTime={false} {...itemProps} width={fourItemWidth}
+                    itemKey='endDate' initialValue={record.endDate||undefined}
+          />
+          <FormItem type='Input' {...itemProps} width={fourItemWidth}
+                    title='备注' itemKey='remark' initialValue={record.remark}
+                    placeholder=''
+                    required={false}
+          />
+        </Row>
+        <Row>
+          <Col span={24} style={{textAlign:'center'}}>
+            (具体要求见附件)
+          </Col>
+        </Row>
+      </div>
+    )
+      }
+  return (
+    <div>
+      <Row>
+        <FormItem type='InputNumber' {...itemProps} width={fourItemWidth}
+                  title='年度' itemKey='year' initialValue={record.year}
+                  placeholder='' controlProps={{...inputNumberProps}} min={1900} max={9999}
+        />
+        <FormItem type='InputNumber' {...itemProps} width={fourItemWidth}
+                  title='月份' itemKey='month' initialValue={record.month}
+                  placeholder='' controlProps={{...inputNumberProps}} min={1} max={12}
+        />
+        <FormItem type='InputNumber' {...itemProps} width={fourItemWidth}
+                  title='批次' itemKey='batchNo' initialValue={record.batchNo}
+                  placeholder='' controlProps={{...inputNumberProps}}
+        />
+        <FormItem title='截止时间' type='DatePicker' showTime={false} {...itemProps} width={fourItemWidth}
+                  itemKey='endDate' initialValue={record.endDate||undefined}
+        />
+      </Row>
+      <Row>
+        <FormItem title='交货日期' type='DatePicker' showTime={false} {...itemProps} width={fourItemWidth}
+                  itemKey='deliveryDate' initialValue={record.deliveryDate||undefined}
+        />
+        <FormItem type='Input' {...itemProps} width={fourItemWidth}
+                  title='交货地点' itemKey='deliveryPoint' initialValue={record.deliveryPoint}
+                  placeholder=''
+                  required={false}
+        />
+        <FormItem type='Input' {...itemProps} width={twoItemWidth}
+                  title='备注' itemKey='remark' initialValue={record.remark}
+                  placeholder=''
+                  required={false}
+        />
+      </Row>
+    </div>
+  );
+    }
+
+//剩下是部门计划和单位计划
+  return (
+    <div>
+      <Row>
+        <FormItem type='InputNumber' {...itemProps} width={fiveItemWidth}
+                  title='年度' itemKey='year' initialValue={record.year}
+                  placeholder='' controlProps={{...inputNumberProps}} min={1900} max={9999}
+        />
+        <FormItem type='InputNumber' {...itemProps} width={fiveItemWidth}
+                   title='月份' itemKey='month' initialValue={record.month}
+                   placeholder='' controlProps={{...inputNumberProps}} min={1} max={12}
+        />
+        <FormItem type='InputNumber' {...itemProps} width={fiveItemWidth}
+                  title='批次' itemKey='batchNo' initialValue={record.batchNo}
+                  placeholder='' controlProps={{...inputNumberProps}}
+        />
+        <FormItem title='截止时间' type='DatePicker' showTime={false} {...itemProps} width={fiveItemWidth}
+                  itemKey='endDate' initialValue={record.endDate||undefined}
+        />
+        <FormItem type='Input' {...itemProps} width={fiveItemWidth}
+                  title='备注' itemKey='remark' initialValue={record.remark}
+                  placeholder=''
+                  required={false}
+        />
+      </Row>
+    </div>
+  );
+
+  }
+}
+export default PlanContent;

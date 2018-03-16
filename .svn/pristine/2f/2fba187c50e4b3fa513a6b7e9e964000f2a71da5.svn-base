@@ -1,0 +1,12 @@
+import { modelTemplate } from 'utils';
+//模型定义
+const namespace = {
+  name: 'budget_item',
+  title:'资金来源',
+  clazz: 'Item',
+};
+const modelParam = {
+  form: undefined, //使用的表单
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

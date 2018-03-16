@@ -1,0 +1,18 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+//权限模型定义
+const namespace = {
+  name: 'orgs',
+  title:'机构',
+  clazz: 'SysOrg',
+  linkAttrs: ['parentOrg', 'children'],
+};
+
+const modelParam = {
+  form: Form, //使用的表单
+  //打开窗口标题生成器
+  titleRender: (record) => !record ? '新机构' :'机构：'+record.orgName,
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

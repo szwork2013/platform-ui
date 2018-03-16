@@ -1,0 +1,24 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+//权限模型定义
+const namespace = {
+  name: 'expenditure_categories',
+  title:'分类',
+  clazz: 'Category',
+  linkAttrs: ['parent', 'children', 'parent.parent', 'parentparent.parent','relevantDept'],
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: {
+    },
+    size: 30, //指定每页记录数
+    sort: ['o.sortNo,asc']
+  },
+  form: Form, //使用的表单
+  //打开窗口标题生成器
+  titleRender: (record) => !record ? '新分类' :'分类：'+record.text,
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

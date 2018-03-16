@@ -1,0 +1,49 @@
+import { connect } from 'dva';
+import { Form as  FormLayout } from 'components'
+import Form from './EmbeddedForm';
+import wfservice from 'wfservice';
+
+function getWeekOfYear(){
+  var today = new Date();
+  var firstDay = new Date(today.getFullYear(),0, 1);
+  var dayOfWeek = firstDay.getDay(); 
+  var spendDay= 1;
+  if (dayOfWeek !=0) {
+    spendDay=7-dayOfWeek+1;
+  }
+  firstDay = new Date(today.getFullYear(),0, 1+spendDay);
+  var d =Math.ceil((today.valueOf()- firstDay.valueOf())/ 86400000);
+  var result =Math.ceil(d/7);
+  return result + 1;
+};
+
+const FormComponent = (props) => {
+  const {model} = props;
+  const {record} = model;
+  //获取表单能否编辑
+  let reportCanEdit = true;
+  if(record.taskState!=='PROCEED'){
+    reportCanEdit = false;
+  }
+  let isNew = FormLayout.isNewRecord(model);
+  let outTime = false;
+  if(getWeekOfYear()>record.week+1)
+    outTime = true;
+  let formCanEdit = (isNew || reportCanEdit) && !outTime;
+  let opinionEdite = wfservice.authz(record, ['opinionEdite']);
+  //按钮条配置
+  const actionBar = {
+    save: (formCanEdit || opinionEdite) && reportCanEdit,
+    edit: false, //显示编辑按钮
+    close: true, //显示关闭按钮
+  };
+	//显示UI
+	return (
+    <FormLayout actionBar={actionBar} embeddedForm={<Form formCanEdit={formCanEdit}/>} {...props}>
+    </FormLayout>
+	);
+}
+
+export default connect(({apptabs, loading}) =>
+  ({apptabs, loading:loading.models.task_report})
+)(FormComponent);

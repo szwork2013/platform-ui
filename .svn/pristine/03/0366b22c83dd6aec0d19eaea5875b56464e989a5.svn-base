@@ -1,0 +1,87 @@
+import React from 'react';
+
+import { Input} from 'antd';
+import { View,DropdownSelect } from 'components';
+
+import {accountingNumberFormat} from 'utils';
+import service from 'service';
+
+import modelDefinition from '../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+
+
+const ViewComponent = ( props ) => {
+  //定义操作条属性
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: true, //显示删除按钮
+    newRow: true
+  }
+  let searchParam={ //搜索条件
+    filter: { //过滤规则
+      clazz: 'MaterialInventory', //模型对应的后台实体类
+      where: 'o.material.type=6',  //条件
+    },
+    size: 20, //指定每页记录数
+    sort: 'o.id,desc' //缺省排序规则
+  }
+
+  //定义选物资下拉框的查询参数
+  const selectProps = {
+    type: 'list',
+    labelKey: 'name',
+    modelName: 'material',
+    searchParam: {
+      filter: { //过滤规则
+        clazz: 'Material', //模型对应的后台实体类
+        where: 'o.type=6 and year='+new Date().getFullYear(), //条件
+      },
+      size: 100, //指定每页记录数
+      sort: 'o.id,asc', //缺省排序规则
+    },
+    onSelect: (value, option, record) => {
+      record.materialSpecification = option.props.dataRef.specification;
+      record.materialName = option.props.dataRef.name;
+    }
+  };
+  //定义列表属性
+  const listProps = {
+    columns:[ // 和antd table组件的列定义相同
+      { title: '物资名称', width: 180,dataIndex: 'materialName', key: 'materialName', link: 'open', sorter:true},
+      { title: '物资规格', width: 390, dataIndex: 'material',type: 'select',
+        key: 'material',link:'open',
+        textRender: (value, record) => {
+        if (record.materialId && !record.material) {
+          let href = service.constructRecordUrl({ modelName: 'material', id: record.materialId });
+          record.material = href ? href : '';
+        }
+        return record.materialSpecification || '***';
+      },
+        editor: <DropdownSelect {...selectProps} />},
+      { title: '数量', dataIndex: 'number', key: 'number', sorter:true,editor:<Input placeholder='请填写数字值' /> },
+    ],
+    colDefaultLink: 'open',
+  };
+
+  //翻页器属性
+  const paginationBarProps = {};
+
+  return (
+    <View key={modelName+'ViewLayout'} {...props}
+      editMode={'row'} //编辑模式：单行编辑
+      modelName={modelName} //模型名称
+      searchParam={searchParam}
+      actionBar={actionBarProps} //操作条定义
+      list={listProps} //列表定义
+      paginationBar={paginationBarProps}
+    />
+  )
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({material_inventory, loading}) =>
+  ({material_inventory, loading: loading.models[modelName]})
+)(ViewComponent);

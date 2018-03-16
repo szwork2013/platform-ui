@@ -1,0 +1,207 @@
+import React from 'react';
+import { Collapse } from 'antd'
+const Panel = Collapse.Panel;
+
+import PaymentSection from './PaymentSection'
+
+import service from 'service';
+
+//权限定义表单
+class PaymentSections extends React.Component {
+
+  componentDidMount() {
+    let {
+      record, //FormContainer注入：模型
+      href,
+      executeLink,
+      dispatch,
+    } = this.props;
+
+    //发消息查询支付数据
+    dispatch({
+      type:'payments/setPayments',
+      payload:{
+        record,
+        href,
+        searchParam:{
+          projection: 'record',
+          filter: {
+            where: 'o.expenditureExcution.id='+service.extractIdFromRecordHref(executeLink)
+          },
+          size:1000,
+        }
+      }
+    });
+  }
+
+  render(){
+    //1 解构参数
+    let {
+      record,
+      mode,
+      canNew,
+      payMoney
+    } = this.props;
+
+    if (!record||!record.payments||!Array.isArray(record.payments)) return null;
+
+    let recordArray=this.constructOppositeArray(record.payments);
+
+    let defaultActiveKey='0';
+    //新增会在老数组基础上加一条，所以新增的时候，默认打开的key要多加一，
+    let recordHref=service.parseRecordUrl(record);
+    if(!canNew||!mode==='new'){
+      recordArray.forEach((item,index)=>{
+        //找到数组中就是支付自己的那条数据，找到就设置默认打开的key
+        if(recordHref===service.parseRecordUrl(item)){
+          defaultActiveKey=(index)+'';
+        }
+      })
+    }
+
+   //显示UI
+    return (
+      <Collapse defaultActiveKey={defaultActiveKey}>
+          {this.renderOptions(canNew,payMoney)}
+      </Collapse>
+    );
+  }
+
+  //根据支付表单数据
+  renderOptions=(canNew,payMoney)=> {
+    //1 解构参数
+    let {
+      mode,//编辑模式
+      record, //FormContainer注入：模型
+      inPayment=false,
+      ...rest
+    } = this.props;
+
+    let recordArray=[];
+
+    //在支付表单的处理
+    if(inPayment){
+      //支付表单新增
+      if(mode==='new'){
+        //设置活动可编辑属性
+        record.active=true;
+        //可以新增才添加数据
+        if(canNew)
+          recordArray.push(record);
+        //如果原来有数据就新增第一条
+        //将顺序倒过来
+        let oppositeArray=this.constructOppositeArray(record.payments);
+        if (oppositeArray&&Array.isArray(oppositeArray)){
+          oppositeArray.forEach((item,index)=>{
+              recordArray.push(item);
+          })
+        }
+
+
+      }else{//支付编辑
+        if (!record||!record.payments||!Array.isArray(record.payments)) return null;
+        //设置活动可编辑属性
+        let recordHref=service.parseRecordUrl(record);
+        let oppositeArray=this.constructOppositeArray(record.payments);
+        for(let index=0;index<record.payments.length;index++){
+          let item=record.payments[index];
+          if(recordHref===service.parseRecordUrl(item)){
+            record.active=true;
+            recordArray.push(record);
+            break;
+          }else{
+            recordArray.push(item);
+          }
+        }
+        //将顺序倒过来
+        recordArray=this.constructOppositeArray(recordArray);
+      }
+    }else{
+      //在立项表单的处理
+      if (!record||!record.payments||!Array.isArray(record.payments)) return null;
+      //将顺序倒过来
+      recordArray=this.constructOppositeArray(record.payments);
+    }
+
+    return recordArray.map( (item,index) => {
+      let PaymentSectionProps={
+        index,
+        key:index,
+        mode,
+        record:item,
+        payedMoney:this.getPayedMoney(recordArray,index),
+        payMoney,
+        paymentSeq:recordArray.length,
+        setTodosInPayment:this.setTodosInPayment,
+        ...rest
+      }
+
+      //处理新增默认第一次支付和第n次支付。
+      let header='第'+item.paymentSeq+'次支付';
+      if(!item.paymentSeq){
+          header='第'+(recordArray.length)+'次支付';
+      }
+
+      return(
+        <Panel header={header} key={index+''}>
+          <PaymentSection {...PaymentSectionProps}/>
+         </Panel>
+      )
+    });
+  }
+
+  //获取已经支付的金额
+  getPayedMoney=(recordArray,indexPayed)=>{
+    let payedMoney=0;
+    recordArray.forEach((item,index)=>{
+      if(index>indexPayed&&(item.state==='PAY'||item.state==='END')){
+        payedMoney=Number(payedMoney)+Number(item.paymentMoney);
+      }
+    })
+    return Number(payedMoney.toFixed(2));
+  }
+
+  //获取已经支付的金额
+  constructOppositeArray=(recordArray)=>{
+    let result=[];
+    for(let index=recordArray.length-1;index>=0;index--){
+      let item=recordArray[index];
+      result.push(item);
+    }
+    return result;
+  }
+
+  setTodosInPayment=(paymentRecord)=>{
+    service.getHrefOfLinkAttr(paymentRecord)
+    let {
+      record,
+      href,
+      dispatch,
+    } = this.props;
+    let link=service.getHrefOfLinkAttr(paymentRecord);
+    if(link===service.getHrefOfLinkAttr(record)){
+      //设置打印信息
+      //已付比率
+      record._payedSchedule =paymentRecord._payedSchedule;
+      //累计比率
+      record._totalSchedule = paymentRecord._payedSchedule;
+      //已付金额
+      record._payedMoney =  paymentRecord._payedMoney;
+      //收款人信息
+      record._payee=  paymentRecord._payee;
+    }
+
+    //发消息查询待办数据
+    dispatch({
+      type:'payments/setTodosInPayment',
+      payload:{
+        record,
+        href,
+        link,
+      }
+    });
+  }
+
+}
+
+export default PaymentSections;

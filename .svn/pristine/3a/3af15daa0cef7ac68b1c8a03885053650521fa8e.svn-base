@@ -1,0 +1,351 @@
+//模型：expenditure_modifyform
+import service from 'service';
+import {Message} from 'antd';
+import {statForDraft, constructSearchParam,batchUpdateMoney} from './service';
+
+export default {
+  namespace: 'expenditure_modifyform',
+  state: {
+    selectInfo:'', //选项信息
+    statInfo: {}, //统计数据
+    conditionData:{}, //条件数据
+    selectedRowKeys:[],
+  },
+
+  reducers: {
+    save(state, {payload}) {
+      return {...state, ...payload}
+    }
+  },
+
+  effects: {
+    //初始化模型消息
+    *initialize({payload}, {select, call, put}) {
+      //初始化模型数据  
+      let conditionData={};
+      let selectInfo='';
+      let statInfo = {};
+      conditionData.projectnull=false;
+      conditionData.categorynull=false;
+      let year={}
+      //设置支出类型
+      conditionData.expenditureType=payload.expenditureType;
+      conditionData = {...conditionData,...year};
+
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.projection = 'modifylist';
+      searchParam.linkAttrs = ['category','fundSource'];
+      searchParam.size=50;
+      yield put({
+        type: 'expenditure_executions/query',
+        payload: {searchParam, initQuery: true}
+      })
+
+      //修改模型数据
+      yield put({
+        type: 'save',
+        payload: {conditionData, selectInfo, statInfo}
+      });
+    },
+
+   //修改条件数据
+    *changeCondition({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      conditionData={...conditionData,...payload};
+
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });
+    },
+
+    //修改条件数据消息
+    *changeConditionData({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      conditionData={...conditionData,...payload};
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = ['category','fundSource'];
+      searchParam.size=50;
+      yield put({
+        type: 'expenditure_executions/query',
+        payload: {searchParam}
+      })
+    },
+
+    //批量更新科目
+    *updateCategory({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      const list = yield select(state=> state['expenditure_executions'].selectedRows);
+      conditionData={...conditionData,...payload};
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });      
+      if(list&&list.length>0){
+        for(let i=0;i<list.length;i++){
+          let eRow=list[i];
+          let serverUrl=service.parseRecordUrl(eRow);
+          let category=conditionData.category;
+          if(category!=undefined){
+             let categoryHref=category.href;
+             eRow.category=categoryHref;
+             //service.updateRecord(serverUrl,eRow);
+             yield service.updateRecord(serverUrl,eRow); //2017-12-07 此处要加yield表示发同步请求 因为后续掉用查询 
+                                                         //如果不使用同步请求会导致后续查询查出的是原来的数据 因为查询时可能数据还没更新完
+                                                         //导致查出的是更新前的数据
+          }
+        }
+        //发送消息请求符合条件的支出数据
+        let searchParam = constructSearchParam(conditionData);
+        searchParam.linkAttrs = [];
+        searchParam.size=50;
+        yield put({
+          type: 'expenditure_executions/query',
+          payload: {searchParam}
+        })
+      }else{
+        Message.info("请勾选需更新的立项");
+      }
+
+    },
+
+    //批量补录已支付金额
+    *updateMoney({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      const list = yield select(state=> state['expenditure_executions'].selectedRows);
+      conditionData={...conditionData,...payload};
+        yield put({
+        type: 'save',
+        payload: {conditionData}
+      });      
+      if(list&&list.length>0){
+        let data=[];
+        for(let i=0;i<list.length;i++){
+          let eRow=list[i];
+          let row={};
+          row.executionId=eRow.id;
+          row.pay=eRow.paymentTotal;
+          row.biddingresultMoney=eRow.biddingresultMoney;
+          data.push(row);
+        }
+        let postdata={'data':JSON.stringify(data)};
+        yield batchUpdateMoney(postdata);
+        //发送消息请求符合条件的支出数据
+        let searchParam = constructSearchParam(conditionData);
+        searchParam.linkAttrs = [];
+        yield put({
+          type: 'expenditure_executions/query',
+          payload: {searchParam}
+        })        
+       }else{
+        Message.info("请勾选需更新的立项");
+      }
+      },
+
+   //批量更新项目/场站
+    *updateProject({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      const list = yield select(state=> state['expenditure_executions'].selectedRows);
+      conditionData={...conditionData,...payload};
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });
+      if(list&&list.length>0){
+        for(let i=0;i<list.length;i++){
+          let eRow=list[i];
+          let serverUrl=service.parseRecordUrl(eRow);
+          let fundSource=conditionData.fundSource;
+          if(fundSource!=undefined){
+             let fundSourceHref=fundSource.href;
+             eRow.fundSource=fundSourceHref;
+             yield service.updateRecord(serverUrl,eRow);
+          }
+        }
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = ['category','fundSource'];
+      searchParam.size=50;
+      yield put({
+          type: 'expenditure_executions/query',
+          payload: {searchParam}
+        })        
+      }else{
+        Message.info("请勾选需更新的立项");
+      }
+    },
+
+   //批量更新科目
+    *updateCategory({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      const list = yield select(state=> state['expenditure_executions'].selectedRows);
+      conditionData={...conditionData,...payload};
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });      
+      if(list&&list.length>0){
+        for(let i=0;i<list.length;i++){
+          let eRow=list[i];
+          let serverUrl=service.parseRecordUrl(eRow);
+          let category=conditionData.category;
+          if(category!=undefined){
+             let categoryHref=category.href;
+             eRow.category=categoryHref;
+             //service.updateRecord(serverUrl,eRow);
+             yield service.updateRecord(serverUrl,eRow); //2017-12-07 此处要加yield表示发同步请求 因为后续掉用查询 
+                                                         //如果不使用同步请求会导致后续查询查出的是原来的数据 因为查询时可能数据还没更新完
+                                                         //导致查出的是更新前的数据
+          }
+        }
+        //发送消息请求符合条件的支出数据
+        let searchParam = constructSearchParam(conditionData);
+        searchParam.linkAttrs = [];
+        searchParam.size=50;
+        yield put({
+          type: 'expenditure_executions/query',
+          payload: {searchParam}
+        })
+      }else{
+        Message.info("请勾选需更新的立项");
+      }
+
+    },
+
+    //批量补录已支付金额
+    *updateMoney({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      const list = yield select(state=> state['expenditure_executions'].selectedRows);
+      conditionData={...conditionData,...payload};
+        yield put({
+        type: 'save',
+        payload: {conditionData}
+      });      
+      if(list&&list.length>0){
+        let data=[];
+        for(let i=0;i<list.length;i++){
+          let eRow=list[i];
+          let row={};
+          row.executionId=eRow.id;
+          row.pay=eRow.paymentTotal;
+          row.biddingresultMoney=eRow.biddingresultMoney;
+          data.push(row);
+        }
+        let postdata={'data':JSON.stringify(data)};
+        yield batchUpdateMoney(postdata);
+        //发送消息请求符合条件的支出数据
+        let searchParam = constructSearchParam(conditionData);
+        searchParam.linkAttrs = [];
+        yield put({
+          type: 'expenditure_executions/query',
+          payload: {searchParam}
+        })        
+       }else{
+        Message.info("请勾选需更新的立项");
+      }
+      },
+
+   //批量更新项目/场站
+    *batchDelete({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      const list = yield select(state=> state['expenditure_executions'].selectedRows);
+      conditionData={...conditionData,...payload};
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });
+      if(list&&list.length>0){
+        for(let i=0;i<list.length;i++){
+          let serverUrl=service.deleteRecord(list[i]);
+        }
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = ['category','fundSource'];
+      searchParam.size=50;
+      yield put({
+          type: 'expenditure_executions/query',
+          payload: {searchParam}
+        })        
+      }else{
+        Message.info("请勾选需删除的立项");
+      }
+    },
+
+
+    //获取选中节点及其所有后代节点的id列表    
+    *getIdListOfDescendants({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      
+      //取出选中节点的id
+      const category = payload.category;
+      if (!category || !category.id) return;
+
+      //构造查询条件
+      let id = category.id;
+      let where = `o.id=${id} or parent.id=${id} or parentparent.id=${id} or parentparentparent.id=${id}`;
+      
+      let categoryModel = yield select(({expenditure_categories}) => expenditure_categories);
+      let searchParam = categoryModel.searchParam;
+      searchParam.filter.where = where;
+      searchParam.projection = 'IdList';
+      searchParam.size = 1000;
+      searchParam.filter.jpql = null;
+
+      //调用服务查询符合条件的分类列表
+      let newSearchParam = service.autoConfigSearchParam({searchParam, state:categoryModel});
+
+      let data = yield call(service.queryPage, 'expenditure_categories',
+        {...newSearchParam});
+      if (data == null) return;
+      data = service.parseRestResult(data);
+
+      //构造id列表
+      let idList = [];
+      for (let c of data.list) {
+        idList.push(c.id);
+      }
+
+      category.idList = idList;
+      conditionData.category = category;
+
+      yield put({
+        type: 'changeCondition',
+        payload: {...conditionData}
+      });
+    },
+
+    //消息处理：获取起草统计信息
+    *statForDraft({payload}, {select, call, put}) {
+      const {year, category, fundSource, expenditureType} = payload.conditionData;
+      
+      if (expenditureType=='operating'&&!(year && category && fundSource)) return;
+      if (expenditureType!='operating'&&!(category && fundSource)) return;
+      
+      //调用服务获取统计信息
+      let statInfo = yield call(statForDraft, payload.conditionData);
+      if (statInfo == null) return;
+
+      //修改模型的统计信息
+      yield put({
+        type: 'save',
+        payload: {statInfo}
+      });
+    },
+
+  }, // end of effects
+};

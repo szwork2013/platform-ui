@@ -1,0 +1,82 @@
+import React from 'react'
+import PropTypes from 'prop-types'
+
+import {Redirect, Route, Switch} from 'dva/router';
+import dynamic from 'dva/dynamic';
+import Layout from './Layout';
+import {modelRegister} from 'utils';
+import service from 'service';
+import paymentpropModel from './config/paymentprop/model';
+modelRegister(paymentpropModel);
+import redheaddocpropModel from './config/redheaddoc/model';
+modelRegister(redheaddocpropModel);
+
+
+//模块路由
+const mainRoute = (props) => {
+  const {
+    match,
+  } = props;
+
+  //动态加载路由
+  const statFormRoute = dynamic({
+    app,
+    component: () => import('./statform')
+  });
+  const draftFormRoute = dynamic({
+    app,
+    component: () => import('./draftform')
+  });
+  const executionRoute = dynamic({
+    app,
+    component: () => import('./execution')
+  });
+  const paymentRoute = dynamic({
+    app,
+    component: () => import('./payment')
+  });
+  const stationRoute = dynamic({
+    app,
+    component: () => import('./config/fundsource/StationView')
+  });
+  const projectRoute = dynamic({
+    app,
+    component: () => import('./config/fundsource/InfrastructureProjectView')
+  });
+  const categoryRoute = dynamic({
+    app,
+    component: () => import('./config/category')
+  });
+  const paymentPropRoute = dynamic({
+    app,
+    component: () => import('./config/paymentprop')
+  });
+  const redheaddocPropRoute = dynamic({
+    app,
+    component: () => import('./config/redheaddoc')
+  });
+
+  const rootPath = match.path;
+  return (
+    <Layout {...props}>
+      <Switch>
+        <Redirect exact from={rootPath} to={rootPath + '/category/operating'} push={true}/>
+        <Route path={rootPath+'/statform'} component={statFormRoute} />
+        <Route path={rootPath+'/draftform/:expenditureType'} component={draftFormRoute} />
+        <Route path={rootPath+'/execution'} component={executionRoute} />
+        <Route path={rootPath+'/payment'} component={paymentRoute} />
+        <Route path={rootPath+'/fundsource/station'} component={stationRoute} />
+        <Route path={rootPath+'/fundsource/project'} component={projectRoute} />
+        <Route path={rootPath+'/category/:expenditureType'} component={categoryRoute} />
+        <Route path={rootPath+'/paymentprop'} component={paymentPropRoute} />
+        <Route path={rootPath+'/redheaddoc'} component={redheaddocPropRoute} />
+      </Switch>
+    </Layout>
+  )
+}
+
+mainRoute.propTypes = {
+  match: PropTypes.object
+}
+
+export default mainRoute;

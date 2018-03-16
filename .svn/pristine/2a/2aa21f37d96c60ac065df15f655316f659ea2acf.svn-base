@@ -1,0 +1,14 @@
+//服务接口
+const service = {
+  //验证操作权限
+  convertTypeToString: (type) => {
+    if (type == 'IT_CONSUMABLE'||type==0) return 'IT耗材';
+    if (type == 'OFFICE_EQUIPMENT'||type==1) return '办公设备';
+    if (type == 'NON_INSTALLATION_EQUIPMENT'||type==2) return '非安装设备';
+    if (type == 'PRODUCTION_EQUIPMENT'||type==3) return '生产设备';
+    if (type == 'ENGINEERING_MATERIALS'||type==4) return '工程物资';
+    if (type == 'OFFICE_SUPPLIES'||type==5) return '办公用品';
+    return type;
+  },
+}
+export default service;

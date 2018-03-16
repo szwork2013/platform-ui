@@ -1,0 +1,87 @@
+import React from 'react';
+import { Input, Checkbox, InputNumber, DatePicker, Alert} from 'antd';
+import {
+  ModuleLayout,
+  Tree,
+  View,
+  DropdownSelect,
+} from 'components';
+
+import modelDefinition from '../../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+let deptId = undefined;
+class ViewComponent extends React.Component {
+
+  render() {
+    const props = this.props;
+    //定义操作条属性
+    const actionBarProps = {
+      new: false, //显示新增按钮
+      delete: false, //显示删除按钮
+      newRow: false,
+      search:false
+    }
+
+    let switchTab = undefined;
+    let sortNo = 1;
+    const sortNoRender = (text,record) =>{
+      if(!switchTab){
+        switchTab = record.deptName;
+      }
+      if(switchTab !== record.deptName){
+        switchTab = record.deptName;
+        sortNo = 1;
+      }
+      return sortNo++;
+    }
+    const stateRender = (value,record) =>{
+      if(value === 'IN_HAND')
+        return '处理中';
+      else if(value === 'HANDLED')
+        return '已解决';
+      else
+        return '草稿';
+    }
+    //定义列表属性
+    const listProps = {
+      columns:[
+        {title: '部门', dataIndex: 'deptName', key: 'deptName', width:100, link: 'view'},
+        {title: '序号', dataIndex: 'sortNo', key: 'sortNo', width:70, render:sortNoRender},
+        {title: '问题', dataIndex: 'title', key: 'title', link: 'view', width:300, link: 'view'},
+        {title: '描述', dataIndex: 'problemDescription', key: 'problemDescription', link: 'view'},
+        {title: '状态', dataIndex: 'state', key: 'state', width:100, render:stateRender},
+        {title: '创建人', dataIndex: 'userName', key: 'userName', link: 'view', width:100,}
+      ],
+    };
+    //翻页器属性
+    const paginationBarProps = { pagination: true };
+    //定义过滤条件
+    const searchParam = {
+      filter:{
+        where:'o.state in (1, 2)'
+      },
+      size: 30, //指定每页记录数
+    };
+    return (
+      <div style={{padding: '1px', marginTop:'-30px'}}>
+        <View key={modelName+'ViewLayout'} {...props}
+          searchParam={searchParam}
+          modelName={modelName} //模型名称
+          editMode='row' //编辑模式：单行编辑
+          actionBar={actionBarProps} //操作条定义
+          paginationBar={true} //翻页器定义
+          list={listProps} //列表定义
+          heightOffset={-10}
+        />
+      </div>
+    )
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import { connect } from 'dva';
+export default connect(({task_problem, loading, apptabs:{tabs}}) =>
+  ({task_problem, loading: loading.models[modelName], tabs})
+)(ViewComponent);

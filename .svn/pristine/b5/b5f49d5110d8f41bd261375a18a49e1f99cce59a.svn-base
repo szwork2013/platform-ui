@@ -1,0 +1,103 @@
+import { View } from 'components';
+
+import modelDefinition from './historyModel';
+
+import {modelRegister} from 'utils';
+import {
+  StyledHeaderDiv,
+} from './styled';
+
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+//结果视图
+const ListView = ( props ) => {
+  const { conditionData,dispatch, model} = props;
+  const {record} = model;
+  //定义操作条属性
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: false, //显示删除按钮
+    newRow: false,
+    search:false
+  }
+
+  //定义列表属性
+  const listProps = {
+    columns:[
+      {title: '年份', dataIndex: 'year', key: 'year', width:50},
+      {title: '月份', dataIndex: 'month', key: 'month', width:50},
+      { title: '责任部门', width:'100',dataIndex: 'deptName', key: 'deptName',
+        textRender: deptTextRender
+      },
+      {title: '指标', dataIndex: '_category.name', key: '_category.name', width:150},
+      {title: '值',width:'300',dataIndex: 'value', key: 'value',
+        textRender: (text,record)=>getIndicatorValue(record)||'***'
+      },
+    ],
+  };
+
+  //翻页器属性
+  const paginationBarProps = {
+    controlProps:{
+      simple:true,
+    },
+    reloadButton:false,
+  };
+  const searchParam = {
+    filter: {
+      where:`o.category.id = ${record.categoryId}`
+    },
+    sort:['o.id,desc',],
+    size: 53, //指定每页记录数
+  };
+  return (
+  <div>
+    <StyledHeaderDiv>
+      { record._category.name + '填报情况'}
+    </StyledHeaderDiv>
+    <View key={modelName+'ViewLayout'} {...props}
+          searchParam={searchParam}
+          modelName={modelName} //模型名称
+          editMode='row' //编辑模式：单行编辑
+          actionBar={actionBarProps} //操作条定义
+          paginationBar={paginationBarProps} //翻页器定义
+          list={listProps} //列表定义
+    />
+  </div>
+  )
+
+  //从记录中获取填报的指标值
+  function getIndicatorValue(record) {
+    let value;
+    let category = record._category||{};
+    if(category.valueType==1){
+      value = record.numberValue;
+    }
+    else if(category.valueType==2){
+      if(category.initFormat == record.textValue){
+        value = undefined;
+      }else {
+        value = record.textValue;
+      }
+    }
+    return value;
+  }
+
+  //责任部门显示构造函数
+  function deptTextRender(value, record) {
+    let color = 'black';
+    if (!getIndicatorValue(record)) color = 'red';
+
+    return(
+      <span style={{color}}>
+        {record.deptName}
+      </span>
+    )
+  }
+}
+
+import { connect } from 'dva';
+export default connect(({apptabs, historyDate, loading}) =>
+  ({apptabs, historyDate, loading:loading.models.historyDate})
+)(ListView);

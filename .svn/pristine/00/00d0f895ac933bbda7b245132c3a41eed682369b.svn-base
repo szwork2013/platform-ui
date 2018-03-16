@@ -1,0 +1,107 @@
+import React from 'react';
+import {
+  Input,
+  Checkbox,
+  InputNumber,
+  DatePicker,
+  Alert,
+  Button
+} from 'antd';
+import {ModuleLayout, Tree, View, DropdownSelect} from 'components';
+
+import modelDefinition from '../../model';
+
+//取得模型名称
+const modelName = modelDefinition.namespace;
+let deptId = undefined;
+class ViewComponent extends React.Component {
+
+  render() {
+    const props = this.props;
+    //定义操作条属性
+    const actionBarProps = {
+      new: false, //显示新增按钮
+      delete: false, //显示删除按钮
+      newRow: false,
+      search: false
+    }
+
+    //定义列表属性
+    const listProps = {
+      columns: [
+        {
+          title: '预算来源',
+          dataIndex: 'fundSourceName',
+          key: 'fundSourceName',
+          width: 60
+        }, {
+          title: '科目',
+          dataIndex: 'categoryText',
+          key: 'categoryText',
+          link: 'view',
+          width: 90
+        }, {
+          title: '事项名称',
+          dataIndex: 'projectName',
+          key: 'projectName',
+          link: 'view',
+          width: 100
+        }, {
+          title: '预算',
+          dataIndex: 'budget',
+          key: 'budget',
+          width: 100
+        }, {
+          title: '中标价格',
+          dataIndex: 'biddingresultMoney',
+          key: 'biddingresultMoney',
+          link: 'view',
+          width: 100
+        }, {
+          title: '中标单位',
+          dataIndex: 'biddingresultUnit',
+          key: 'biddingresultUnit',
+          link: 'view',
+          width: 100
+        },{
+          title:'已支付金额',
+          dataIndex: 'paymentTotal',
+          key: 'paymentTotal',
+          link: 'view',
+          width: 100
+        }
+      ],
+      rowSelection: {},
+      // rowActions:[   { title:'删除', type:'deleteRow' },   { title:'查看', type:'open'
+      // }, ],
+    };
+    //翻页器属性
+    const paginationBarProps = {
+      pagination: true
+    };
+    //定义过滤条件
+    const searchParam = {
+      filter: undefined,
+      search: 'getExecutions',
+      size: 60, //指定每页记录数
+    };
+    return (
+      <div style={{padding: '1px', marginTop:'-30px'}}>
+        <View {...props} 
+          key={modelName + 'ViewLayout'} 
+          modelName={modelName} //模型名称
+          searchParam={searchParam} 
+          actionBar={actionBarProps} //操作条定义
+          list={listProps} //列表定义
+          paginationBar={true} //翻页器定义
+          heightOffset={-10}
+        />
+    </div>)
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import {connect} from 'dva';
+export default connect(({executionScreen, loading, apptabs: {
+    tabs
+  }}) => ({executionScreen, loading: loading.models[modelName], tabs}))(ViewComponent);

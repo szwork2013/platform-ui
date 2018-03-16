@@ -1,0 +1,54 @@
+import service from 'service';
+import Form from '../report/Form';
+import { modelTemplate } from 'utils';
+
+//权限模型定义
+const namespace = {
+  name: 'indicator_monthlyindicator', //模型的命名空间
+  title: '月度信息', //模型的名称
+  clazz: 'MonthlyIndicator', //模型对应的后台实体类
+  linkAttr:['category','createdBy']
+}
+
+const modelParam = {
+  recordProjection:'default',
+  form: Form, //使用的表单
+  titleRender: (record) => !record._category.name ? '报表信息' :'报表信息：'+record._category.name,
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+      where: '(1=1)', //条件
+    },
+    sort: ['o.category.sortNo,asc','o.category.no,asc'],//缺省排序规则
+    size: 20, //指定每页记录数
+  },
+  effects: {
+    //表单消息：发布月报内容
+    *report ({payload}, { call, put,select }) {
+      //获取当前记录
+      let {record, confirmed} = payload;
+      record.state=2;
+      //发送消息弹出对话框
+      yield put({
+        type:'modaldialog/show',
+        payload: {
+          title: '上报确认',
+          content: '上报后将不可修改',
+          onOk: (dispatch) => { //点击ok按钮处理
+            //发送消息保存当前记录到数据库并关闭当前记录
+            dispatch({
+              type: namespace.name+'/update',
+              payload:{
+                href: service.parseRecordUrl(record),
+                record,
+                thenClose: true, //保存后关闭记录
+              }
+            });
+            return true;
+          },
+        }
+      });
+    }
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

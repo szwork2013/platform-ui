@@ -1,0 +1,65 @@
+import React from 'react';
+import {connect} from 'dva';
+import {ModuleLayout} from 'components';
+
+const menuItems = [
+  {
+    path: 'consumable',
+    icon: 'file-text',
+    title: 'IT耗材需求计划',
+    expanded: true,
+    children: [
+      {
+        path: 'company',
+        icon: 'layout',
+        title: '公司'
+      },
+      {
+        path: 'alldepartment',
+        icon: 'layout',
+        title: '所有部门'
+      },
+      {
+        path: 'department',
+        icon: 'layout',
+        title: '本部门'
+      },
+      {
+        path: 'units',
+        icon: 'layout',
+        title: '二级单位'
+      },
+      {
+        path: 'materialsearch',
+        icon: 'file-text',
+        title: '耗材查询'
+      },
+      {
+        path: 'materialsetting',
+        icon: 'setting',
+        title: '选项配置',
+        expanded: true,
+        children:[
+          {
+            path: 'materialimport',
+            icon: 'file-text',
+            title: '导入耗材',
+          }
+        ]
+      },
+    ]
+  },
+  {
+    path: 'supplier',
+    icon: 'meh-o',
+    title: '供应商',
+  }
+];
+
+const Layout = (props) => {
+  return (
+    <ModuleLayout trigger siderTitle='配置' siderIcon='tool' menu={menuItems} {...props} />
+  )
+}
+
+export default Layout;

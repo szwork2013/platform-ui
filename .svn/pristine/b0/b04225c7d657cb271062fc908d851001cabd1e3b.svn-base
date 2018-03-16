@@ -1,0 +1,91 @@
+import {Input, DatePicker} from 'antd';
+import {View,DropdownSelect,Tree} from 'components';
+
+//获取模型名称
+import modelDefinition from '../model';
+const modelName = modelDefinition.namespace;
+
+import service from 'service';
+
+const ViewComponent = (props) => {
+
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: true, //显示删除按钮
+    newRow: true,
+    saveTablePayloadRender: (model) => (
+      {defaultValues: {type: 0}}
+    )
+  }
+
+  const treeProps = constructTreeProps();
+
+  const  searchParam = { //搜索条件
+    filter: { //过滤规则
+      where:'o.type=1'
+    },
+    sort: ['o.sortNo,asc','o.org.sortNo,asc'],//排序
+    size: 1000,
+  };
+
+  //定义列表属性
+  const listProps = {
+    columns: [
+      {type:'select', title: '所属机构', dataIndex: 'org', key: 'org', width: 300,
+        editor: <DropdownSelect {...treeProps} />,
+        textRender: orgRender, fulltext: 'org.orgName',
+      },
+      {title: '项目名称',width: 300, dataIndex: 'name', key: 'name', sorter: true, editor:<Input />},
+      {title: '排序号', width: 200, dataIndex: 'sortNo', key: 'sortNo', sorter: true, editor:<Input />},
+      {type:'date', title: '结束日期', dataIndex: 'endDate', key: 'endDate',
+        editor:<DatePicker />, fulltext: false,
+      },
+    ],
+    rowSelection: {},
+  };
+
+  return (
+    <View key={modelName + 'ViewLayout'} {...props}
+          editMode='row'
+          modelName={modelName} //模型名称
+          actionBar={actionBarProps} //操作条定义
+          list={listProps} //列表定义
+          searchParam={searchParam}
+    />
+  )
+
+
+  //构造机构树的属性
+  function constructTreeProps(){
+    const props = props;
+
+    const treeProps = {
+      type:'list',
+      labelKey: 'orgName',
+      modelName: 'orgs',
+      searchParam: {
+        filter: {
+          where:'o.type=3 or o.type=4'
+        },
+        sort: ['o.sortNo,asc'],
+      },
+    };
+
+    return treeProps;
+  }
+
+  //所属机构构造函数
+  function orgRender(value, record) {
+    let href;
+    if (record.orgId)
+      href = service.constructRecordUrl({modelName:'orgs', id:record.orgId});
+    record.org = record.org?record.org:href;
+    return record.orgName;
+  }
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import {connect} from 'dva';
+export default connect(({expenditure_fundsource, loading, apptabs:{tabs}}) =>
+  ({expenditure_fundsource, loading: loading.models[modelName], tabs})
+)(ViewComponent);

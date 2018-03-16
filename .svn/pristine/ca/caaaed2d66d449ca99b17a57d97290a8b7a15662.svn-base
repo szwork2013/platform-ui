@@ -1,0 +1,171 @@
+import { Input, DatePicker } from 'antd';
+
+import {
+  View,
+  DropdownSelect,
+  Tree,
+} from 'components';
+
+import service from  'service'
+
+import modelDefinition from '../model';
+const modelName = modelDefinition.namespace;
+
+//Layout组件
+const Layout = (props) => {
+  const {match} = props;
+
+  //获取支出性质
+  const expenditureType = service.getRouteParam({match, paramName:'expenditureType'});
+  const type = (expenditureType =='infrastructure') ? 0 : 1;
+
+  const actionBarProps = {
+    new: false, //显示新增按钮
+    delete: true, //显示删除按钮
+    newRow: true,
+    saveTablePayloadRender: (model) => (
+      {defaultValues: {type}}
+    )
+  }
+
+  const treeProps = constructTreeProps();
+  const categoryProps  = constructCategoryProps();
+
+  const  searchParam = { //搜索条件
+    projection:'list',
+    filter: { //过滤规则
+      where:'o.type=' +  type
+    },
+    size: 10,
+    sort: ['parentparentparent.sortNo,asc','parentparent.sortNo,asc','parent.sortNo,asc','o.sortNo,asc']//排序
+  };
+
+  //定义列表属性
+  const listProps = {
+    columns: [
+      {title: '编码', width: 100, dataIndex: 'parent.no', key: 'parent.no', sorter: true,
+        textRender:fullNoRender
+      },
+      {title: '名称', width: 200, dataIndex: 'text', key: 'text', sorter: true,
+        editor:<Input />},
+      {title: '编号', width: 80, dataIndex: 'no', key: 'no', sorter: true,
+        editor:<Input />
+      },
+      {title: '排序号', width: 80, dataIndex: 'sortNo', key: 'sortNo', sorter: true,
+        editor:<Input />},
+      {type:'select', title: '归口管理部门', width: 130, dataIndex: 'relevantDept', key: 'relevantDept',
+        fulltext: 'relevantDept.orgName',
+        editor:<DropdownSelect {...treeProps} />,
+        textRender:orgRender
+      },
+      {type:'date', title: '废止日期', width: 130, dataIndex: 'endDate', key: 'endDate',
+        fulltext:false, editor:<DatePicker />
+      },
+      {type:'select', title: '上级分类', dataIndex: 'parent', key: 'parent',
+        fulltext: 'parent.text',
+        editor:<DropdownSelect {...categoryProps} />,
+        textRender:categoryRender
+      },
+    ],
+    rowSelection: {},
+  };
+
+  return (
+    <View key={modelName + 'ViewLayout'} {...props}
+          editMode='row'
+          modelName={modelName} //模型名称
+          actionBar={actionBarProps} //操作条定义
+          list={listProps} //列表定义
+          searchParam={searchParam}
+    />
+  )
+
+  //构造机构树的属性
+  function constructTreeProps(){
+    const props = props;
+
+    const treeProps = {
+      type:'list',
+      labelKey: 'orgName',
+      modelName: 'orgs',
+      searchParam: {
+        filter: {
+          where:'o.type=2'
+        },
+        sort: 'o.sortNo,asc',
+      },
+    };
+
+    return treeProps;
+  }
+
+  //构造分类树的属性
+  function constructCategoryProps(){
+    const props = props;
+
+    const categoryProps = {
+      type:'tree',
+      modelName: 'expenditure_categories',
+      searchParam: {
+        projection: 'list',
+        filter: {
+          where:'o.type='+type
+        },
+        size:1000,
+        sort: 'o.sortNo,asc',
+      },
+    };
+
+    return categoryProps;
+  }
+
+  //编号构造
+  function fullNoRender(text, record) {
+    let fullNo = record&&record.fullNo;
+    if (!fullNo||fullNo=='') return '***';
+    return fullNo;
+  }
+
+  //科目名称构造
+  function fullNameRender(text, record) {
+    let fullName = record&&record.fullName;
+    if (!fullName||fullName=='') return '***';
+    let index = fullName.indexOf('/');
+    if (index<0) return fullName;
+    return fullName.substring(index+1);
+  }
+
+  //所属上级分类构造函数
+  function categoryRender(value, record) {
+    //设置值用于编辑
+    let href;
+    if (record.parentId)
+      href = service.constructRecordUrl({modelName:'expenditure_categories', id:record.parentId});
+    record.parent = record.parent?record.parent:href;
+
+    //构造显示值
+    let fullName = record&&record.fullName;
+    if (!fullName||fullName=='') return '***';
+    let arr = fullName.split('/');
+    if (arr.length < 1) return fullName;
+    return arr[arr.length-2];
+  }
+
+  //所属机构构造函数
+  function orgRender(value, record) {
+    //设置编辑值
+    let href;
+    if (record.relevantDeptId)
+      href = service.constructRecordUrl({modelName:'orgs', id:record.relevantDeptId});
+    record.relevantDept = record.relevantDept?record.relevantDept:href;
+
+    return record.relevantDeptName;
+  }
+
+}
+
+//连接模型(model)和组件，使模型变化时，组件属性也跟着变化，从而重新加载组件
+import {connect} from 'dva';
+export default connect(({expenditure_categories, loading, apptabs:{tabs}}) =>
+  ({expenditure_categories, loading: loading.models[modelName], tabs})
+)(Layout);

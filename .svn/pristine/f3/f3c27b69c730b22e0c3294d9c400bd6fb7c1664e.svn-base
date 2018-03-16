@@ -1,0 +1,78 @@
+import styled from 'styled-components';
+import { injectGlobal } from 'styled-components';
+
+import { Layout, Menu, Row, Col } from 'antd';
+
+//全局样式定义
+injectGlobal`
+  //Modal对话框样式定义
+  .ant-modal-body {
+    margin: 0px !important;
+    padding: 15px 15px !important;
+  }
+
+  //所有sider的背景颜色
+  .ant-layout-sider {
+    background: #f5f5f5 !important;
+  }
+
+  //右对齐
+  .xpiui-view-col-right {
+    text-align: right;
+    a {
+      padding-right: 2px !important;
+    }
+  }
+
+  .xpiui-view-col-center {
+    text-align: center;
+  }
+
+  //所有布局的边框样式
+  .xpnui-layout-border {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    display: block;
+    border-radius: 3px;
+    border: 1px solid #e9e9e9;
+    -webkit-transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+    -o-transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+    transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);  
+  }
+`;
+
+//样式定义
+const theme = {
+  navbar: {
+    height: 43,
+    totalHeight: () => theme.navbar.height,
+  }
+}
+
+//顶层布局样式
+const StyledTopLayout = styled(Layout)`
+  height: 100%;
+`;
+
+//导航条div样式
+const StyledNavBarRow = styled(Row)`
+  background: #f7f7f7;
+  height: ${theme.navbar.height}px !important;
+  .ant-menu {
+    line-height: ${theme.navbar.height-2}px !important;    
+  }
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+`;
+
+export {
+  StyledTopLayout,
+  StyledNavBarRow,
+  theme
+}

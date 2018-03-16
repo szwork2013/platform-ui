@@ -1,0 +1,156 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+import service from 'service';
+import wfservice from 'wfservice';
+import config from 'config';
+
+//权限模型定义
+const namespace = {
+  name: 'demand_plan',
+  title:'需求计划',
+  clazz: 'DemandPlan', //模型对应的后台实体类
+  linkAttrs:['createdBy']
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+
+    },
+    size: 20, //指定每页记录数
+    sort: 'o.id,asc' //缺省排序规则
+  },
+  form: Form, //使用的表单
+  titleRender: (record)=>{
+
+    let orgType='公司';
+    if(record.orgLevel==1)
+      orgType='单位';
+
+    if(record&&record.year){
+      return record.year+'年'+record.month+'月'+orgType+'需求计划';
+    }else{
+      return '新'+orgType+'需求计划';
+    }
+  },
+  effects: {
+    //表单消息：打开部门计划
+    *newDepartmentPlan ({payload}, { call, put,select }) {
+      //解构消息
+      let { record } = payload;
+
+      //查询有没有创建过，没有创建就创建一条新的数据
+      const user = service.userInfo.user;
+      let departmentPlanRecord=yield call(service.queryRecord,
+        config.API+'/department_plan/org_and_demandplan?orgId='+user.org.id+'&demandPlanId='+service.getRecordId(record),{})
+      if(!departmentPlanRecord)
+      {
+        let entityLink=service.getHrefOfLinkAttr(record);
+        let departRecord = {
+          demandPlan:entityLink,
+          demandPlanRecord:record,
+        };
+        let model = {record:departRecord, state:{mode:'new', origin:departRecord}}
+        yield put({
+          type: 'department_plan/new',
+          payload: {processNo:'BMITHCJH',
+            parentInstanceId:wfservice.getInstanceId(record),
+            parentInstanceEntityLink:entityLink,model}
+        })
+
+      }else{
+        departmentPlanRecord._links={};
+        departmentPlanRecord._links.self={};
+        departmentPlanRecord._links.self.href= service.constructRecordUrl({ modelName: 'department_plan', id: departmentPlanRecord.id });
+        yield put({
+          type: 'department_plan/open',
+          payload: {record:departmentPlanRecord,state:{mode:'edit'}}
+        })
+      }
+    },
+
+    //表单消息：汇总需求计划
+    *collectPlan ({payload}, { call, put,select }) {
+      //解构消息
+      let { record } = payload;
+      let recordId=service.getRecordId(record);
+      let dataKey=recordId+'0'+record.type;
+      let result=yield call(service.updateRecord,service.parseRecordUrl(record)+'/collect_plan',{});
+
+      if(result){
+        let searchParam=  {
+          filter: { //过滤规则
+            clazz: 'PlanItem', //模型对应的后台实体类
+            where:  'o.demandPlan.id='+recordId, //条件
+          },
+          size: 100, //指定每页记录数
+          sort: 'o.id,asc', //缺省排序规则
+        };
+        yield put ({
+          type:'plan_item/query',
+          payload: {
+            searchParam,
+            dataKey:dataKey,
+          }
+        });
+      }
+    },
+
+    //打开采购表单
+    *newPurchase({payload},{ call, put,select }){
+      let { record } = payload;
+
+      //查询有没有创建过，没有创建就创建一条新的数据
+      let demandPlanRecord=yield call(service.updateRecord,service.getHrefOfLinkAttr(record)+'/has_purchase',{})
+      //没有采购计划
+      if(!demandPlanRecord)
+      {
+        let purchasePlan = {
+            type: record.type,
+            periodType: record.periodType,
+            orgLevel:record.orgLevel,
+            year: record.year,
+            quarter: record.quarter,
+            month: record.month,
+            batchNo: record.batchNo,
+            demandPlans: [service.getHrefOfLinkAttr(record)],
+          }
+        ;
+        let model = {record:purchasePlan, state:{mode:'new', origin:purchasePlan}}
+        yield put({
+          type: 'purchase_plan/new',
+          payload: {processNo:record.orgLevel!=1?'ITHCCG':'TlUNITITCP',model}
+        })
+      }else{
+        //有采购计划就编辑打开采购计划
+        let planId=service.getRecordId(record);
+        let purchasePlan=yield call(service.queryRecord,
+          config.API+'/purchase_plan/find_by_plan_id?planId='+planId,{})
+        purchasePlan._links={};
+        purchasePlan._links.self={};
+        purchasePlan._links.self.href= service.constructRecordUrl({ modelName: 'purchase_plan', id: purchasePlan.id });
+        yield put({
+          type: 'purchase_plan/open',
+          payload: {record:purchasePlan,state:{mode:'edit'}}
+        })
+      }
+    },
+
+    //设置批次号
+    *initBatchNo({payload},{ call, put,select }){
+      let { record,href } = payload;
+      record.year=new Date().getFullYear();
+      record.month=new Date().getMonth()+1;
+      const user = service.userInfo.user;
+      let result=yield call(service.queryRecord,
+        config.API+'/demand_plan/get_init_batchno?orgId='
+        +user.org.id+'&orgLevel='+record.orgLevel,{});
+      if(result);
+       record.batchNo=result;
+    },
+
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

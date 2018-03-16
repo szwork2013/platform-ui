@@ -1,0 +1,61 @@
+import { modelTemplate } from 'utils';
+import Form from './Form';
+
+import service from 'service';
+import config from 'config';
+
+//权限模型定义
+const namespace = {
+  name: 'demand_plan',
+  title:'需求计划',
+  clazz: 'DemandPlan', //模型对应的后台实体类
+  linkAttrs:['createdBy']
+};
+
+const modelParam = {
+  searchParam: { //搜索条件
+    filter: { //过滤规则
+
+    },
+    size: 20, //指定每页记录数
+    sort: 'o.id,asc' //缺省排序规则
+  },
+  form: Form, //使用的表单
+  titleRender: (record)=>record&&record.id? record.year+'年'+record.month+'月公司需求计划':'新公司需求计划',
+  effects: {
+    //表单消息：打开部门计划
+    *newDepartmentPlan ({payload}, { call, put,select }) {
+      //解构消息
+      let { record } = payload;
+
+      //查询有没有创建过，没有创建就创建一条新的数据
+      const user = service.userInfo.user;
+      let departmentPlanRecord=yield call(service.queryRecord,
+        config.API+'/department_plan/org_and_demandlan?orgId='+user.org.id+'&demandPlanId='+service.getRecordId(record),{})
+      if(!departmentPlanRecord)
+      {
+        //沒有就創建一條記錄
+        departmentPlanRecord = {
+          demandPlan:service.getHrefOfLinkAttr(record),
+          org:config.API+'/orgs/'+user.org.id
+        };
+        departmentPlanRecord=yield call(service.createRecord, 'department_plan',departmentPlanRecord)
+        yield put({
+          type: 'department_plan/open',
+          payload: {record:departmentPlanRecord,state:{mode:'edit'}}
+        })
+      }else{
+        departmentPlanRecord._links={};
+        departmentPlanRecord._links.self={};
+        departmentPlanRecord._links.self.href=config.API+'/department_plan/'+departmentPlanRecord.id;
+        yield put({
+          type: 'department_plan/open',
+          payload: {record:departmentPlanRecord,state:{mode:'edit'}}
+        })
+      }
+    },
+
+  },
+};
+
+export default modelTemplate.createModel(namespace, modelParam);

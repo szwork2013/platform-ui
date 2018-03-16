@@ -1,0 +1,163 @@
+import { modelTemplate } from 'utils';
+
+import service from 'service';
+import {statForQuery, constructSearchParam} from './service';
+
+const namespace = {
+    name: 'expenditure_queryform',
+    dataSource: 'expenditure_executions', //数据源
+    title:'综合查询',
+    clazz: 'Execution',
+    linkAttrs: ['category', 'category.parent', 'categoryparent.parent', 'categoryparentparent.parent', 'createdBy','fundSource', 'fundSource.org', 'reserveFundPayee','contractPayee'],
+};
+
+const modelParam = {
+  state: {
+    selectInfo: '',
+    conditionData: {},
+    statInfo: {},
+  },
+  titleRender: (record)=>record&&record.projectName?'立项：'+record.projectName:'新立项',
+  effects: {
+    //初始化模型消息
+    *initialize({payload}, {select, call, put}) {
+      //初始化模型数据  
+      let conditionData={...payload};
+      let selectInfo='';
+      let statInfo = {};
+
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = [];
+      searchParam.projection = 'list';
+      yield put({
+        type: 'query',
+        payload: {searchParam, initQuery: true}
+      })
+      
+      //修改模型数据
+      yield put({
+        type: 'save',
+        payload: {conditionData, selectInfo, statInfo}
+      });
+
+      //发送消息获取统计信息
+      yield put({
+        type: 'statForQuery',
+        payload: {conditionData}
+      });
+    },
+
+    //修改条件数据消息
+    *changeConditionData({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      conditionData={...conditionData,...payload};
+
+      if (!conditionData.expenditureType) {
+        conditionData.category = {};
+      }
+      
+      yield put({
+        type: 'save',
+        payload: {conditionData}
+      });
+
+      //发送消息请求符合条件的支出数据
+      let searchParam = constructSearchParam(conditionData);
+      searchParam.linkAttrs = [];
+      searchParam.projection = 'list';
+
+      if (!(conditionData.where||conditionData.where=='')) {
+        yield put({
+          type: 'query',
+          payload: {searchParam}
+        })
+      }
+
+      //发送消息获取统计信息
+      yield put({
+        type: 'statForQuery',
+        payload: {conditionData}
+      });
+    },
+
+    //获取选中节点及其所有后代节点的id列表    
+    *getIdListOfDescendants({type, payload}, {select, call, put}) {
+      const namespace = service.getNamespace(type);
+      let conditionData = yield select((state) => state[namespace].conditionData);
+      
+      //取出选中节点的id
+      const category = payload.category;
+      if (!category || !category.id) return;
+
+      //构造查询条件
+      let id = category.id;
+      let where = `o.id=${id} or parent.id=${id} or parentparent.id=${id} or parentparentparent.id=${id}`;
+      
+      let categoryModel = yield select(({expenditure_categories}) => expenditure_categories);
+      let searchParam = categoryModel.searchParam;
+      searchParam.filter.where = where;
+      searchParam.projection = 'IdList';
+      searchParam.size = 1000;
+      searchParam.filter.jpql = null;
+      
+      //调用服务查询符合条件的分类列表
+      let newSearchParam = service.autoConfigSearchParam({searchParam, state:categoryModel});
+
+      let data = yield call(service.queryPage, 'expenditure_categories',
+        {...newSearchParam});
+      if (data == null) return;
+      data = service.parseRestResult(data);
+
+      //构造id列表
+      let idList = [];
+      for (let c of data.list) {
+        idList.push(c.id);
+      }
+
+      category.idList = idList;
+      conditionData.category = category;
+
+      yield put({
+        type: 'changeConditionData',
+        payload: {...conditionData}
+      });
+    },
+
+    //消息处理：获取起草统计信息
+    *statForQuery({type, payload}, {select, call, put}) {
+      //调用服务获取统计信息
+      let statInfo = yield call(statForQuery, payload.conditionData);
+      if (statInfo == null) return;
+
+      //郑波2017-11-19增加：多个视图使用一个模型
+      const namespace = service.getNamespace(type);
+      let state = yield select((state) => state[namespace]);
+
+      let saveData = {statInfo};
+      const {dataKey} = payload;
+      if (dataKey) {
+        let statData = state.statData||[];
+        let index = statData.findIndex((r) => r.key == dataKey);
+        if (index>=0) {
+          statData[index] = {key:dataKey, statInfo};
+        }
+        else {
+          statData.push({key:dataKey, statInfo})
+        }
+        saveData = {statData};
+      }
+      //---END---
+
+      //修改模型的统计信息
+      yield put({
+        type: 'save',
+        payload: {...saveData, statInfo}
+      });
+    },
+
+  }, // end of effects
+}
+
+export default modelTemplate.createModel(namespace, modelParam);
